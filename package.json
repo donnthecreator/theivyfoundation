@@ -1,0 +1,9 @@
+{
+  "name": "theivyfoundation",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The Process: Ivy Foundation reentry and mentorship app",
+  "dependencies": {
+    "@neondatabase/serverless": "0.10.4"
+  }
+}
