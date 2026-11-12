@@ -134,14 +134,19 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:1re
 .iv{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:1.2rem;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:22px;padding:1.2rem}
 @media (max-width:600px){.iv{grid-template-columns:1fr}.iv .av{max-width:200px;margin:0 auto}}
 .av{position:relative}
-.av svg{width:100%;height:auto;display:block;border-radius:18px;background:#E3EFE6}
+.av svg{width:100%;height:auto;display:block;border-radius:18px;background:#C9D4D9}
+.av .eye,.av .mouth,.av .head{transform-box:fill-box}
+.avphoto{position:relative}.avphoto img{width:100%;aspect-ratio:8/9;object-fit:cover;border-radius:18px;display:block}
+.avbars{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:none;gap:4px;align-items:flex-end;height:22px;padding:5px 9px;border-radius:999px;background:rgba(0,0,0,.55)}
+.av.talking .avbars{display:flex}.avbars i{width:4px;height:100%;background:#fff;border-radius:2px;transform-origin:bottom;animation:bars .5s infinite alternate ease-in-out}.avbars i:nth-child(2){animation-delay:.15s}.avbars i:nth-child(3){animation-delay:.3s}.avbars i:nth-child(4){animation-delay:.08s}
+@keyframes bars{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
 .av .eye{transform-origin:center;animation:blink 5s infinite}
 .av .eye.r{animation-delay:.1s}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
-.av .mouth{transform-origin:center;transition:transform .12s}
+.av .mouth{transform-origin:center;transform:scaleY(0);transition:transform .12s}
 .av.talking .mouth{animation:talk .28s infinite alternate ease-in-out}
-@keyframes talk{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
-.av.talking .head{animation:nod 1.6s infinite ease-in-out}
+@keyframes talk{from{transform:scaleY(.1)}to{transform:scaleY(1)}}
+.av.talking .head{transform-origin:50% 90%;animation:nod 1.6s infinite ease-in-out}
 @keyframes nod{0%,100%{transform:rotate(0)}50%{transform:rotate(-1.5deg)}}
 .av .name{text-align:center;margin:.6rem 0 0;font-size:.95rem}
 .av .name b{display:block;font-family:var(--display);font-size:1.1rem}
@@ -1212,7 +1217,7 @@ const DEF_PHOTOS={visit:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD
 function photoOf(k){return S.photos[k]||DEF_PHOTOS[k]||""}
 function ph(k,alt,cls){const s=photoOf(k);return s?`<img class="photo ${cls||""}" src="${s}" alt="${esc(alt)}" loading="lazy">`:""}
 function readPhoto(file,max){return new Promise((res,rej)=>{if(!/^image\//.test(file.type))return rej(new Error("type"));const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.82))};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
-const PHOTO_SLOTS=[["inside","\"Inside the walls\" (home)","Generic: hands at a table, an open door, a visiting room. Leave empty to keep the illustration."],["hero","Home page hero (behind the big headline)","Wide shot. Only used when no video is set."],["community","\"In the community\" photo (home and About)","A group shot from an event."],["founder","\"On stage\" photo (home and About)","A tall photo of speakers or the founder."],["council","\"Youth voice\" photo (home)","Youth at City Hall or a civic event."],["chief","\"Real conversations\" photo (home)","A speaker talking with the kids."],["problem","\"The problem\" section","A detention facility, a courtroom, or a young person alone."],["works","\"What works\" section","A mentor and a teen, a coach, a conversation."],["how","\"We exist to\" section","Students on tablets, at a job site, or at a skills day."],["stars","STARS Academy program page","The STARS building, a classroom, or a community event."]];
+const PHOTO_SLOTS=[["iv_carter","Mock interviewer: Ms. Carter","A head-and-shoulders photo of a real adult who agreed to be the interviewer. Leave empty to keep the drawing."],["iv_reed","Mock interviewer: Mr. Reed","A head-and-shoulders photo of a real adult who agreed to be the interviewer. Leave empty to keep the drawing."],["inside","\"Inside the walls\" (home)","Generic: hands at a table, an open door, a visiting room. Leave empty to keep the illustration."],["hero","Home page hero (behind the big headline)","Wide shot. Only used when no video is set."],["community","\"In the community\" photo (home and About)","A group shot from an event."],["founder","\"On stage\" photo (home and About)","A tall photo of speakers or the founder."],["council","\"Youth voice\" photo (home)","Youth at City Hall or a civic event."],["chief","\"Real conversations\" photo (home)","A speaker talking with the kids."],["problem","\"The problem\" section","A detention facility, a courtroom, or a young person alone."],["works","\"What works\" section","A mentor and a teen, a coach, a conversation."],["how","\"We exist to\" section","Students on tablets, at a job site, or at a skills day."],["stars","STARS Academy program page","The STARS building, a classroom, or a community event."]];
 function readLogo(file){return new Promise((res,rej)=>{if(!/^image\//.test(file.type))return rej(new Error("type"));const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,256/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/png"))};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
 function partnerOf(j){return S.partners.find(p=>p.id===j.partnerId)}
 function openJobs(){return S.jobs.filter(j=>j.open&&partnerOf(j))}
@@ -1436,17 +1441,47 @@ const IV_QUESTIONS=[
  {q:"Have you ever been in trouble with the law?",tip:"Short and honest, then what you're doing now. Check with your PO first about what you have to share.",key:["mistake","program","now","school","learned","ready"],past:true},
  {q:"What hours can you work, and how will you get here?",tip:"Be specific: days, times, and your ride plan.",key:["after school","weekend","bus","ride","monday","saturday","evening","am","pm"]},
  {q:"Do you have any questions for me?",tip:"Always ask one. Training, schedule, or what a good first month looks like.",key:["?","how","what","when","training","schedule"]}];
+function shade(hex,amt){const n=parseInt(hex.slice(1),16);const f=c=>Math.max(0,Math.min(255,Math.round(c+(amt<0?c:255-c)*amt)));return "#"+[n>>16,(n>>8)&255,n&255].map(c=>f(c).toString(16).padStart(2,"0")).join("")}
 function avatarSVG(p){
-  const hair=p.style==="curls"?`<path d="M38 70c-6-30 14-48 42-48s48 18 42 48c-4-12-12-18-20-20-6 6-18 8-26 4-8 4-20 2-26-4-8 2-10 10-12 20z" fill="${p.hair}"/><circle cx="36" cy="80" r="12" fill="${p.hair}"/><circle cx="124" cy="80" r="12" fill="${p.hair}"/>`:`<path d="M40 72c0-28 16-44 40-44s40 16 40 44c-6-10-16-16-40-16s-34 6-40 16z" fill="${p.hair}"/>`;
-  return `<svg viewBox="0 0 160 180" role="img" aria-label="${esc(p.name)}, ${esc(p.role)}"><rect width="160" height="180" fill="#E3EFE6"/>
-  <path d="M20 180c0-30 24-44 60-44s60 14 60 44z" fill="${p.shirt}"/><path d="M68 136l12 14 12-14-12 6z" fill="#fff" opacity=".9"/>
-  <g class="head"><rect x="68" y="112" width="24" height="22" rx="8" fill="${p.skin}"/>
-  <ellipse cx="80" cy="82" rx="38" ry="44" fill="${p.skin}"/>${hair}
-  <ellipse class="eye l" cx="66" cy="84" rx="5" ry="5.5" fill="#fff"/><ellipse class="eye r" cx="94" cy="84" rx="5" ry="5.5" fill="#fff"/>
-  <circle cx="67" cy="85" r="2.6" fill="#111"/><circle cx="95" cy="85" r="2.6" fill="#111"/>
-  <path d="M58 72q8-5 16 0" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M86 72q8-5 16 0" stroke="${p.hair}" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M80 92v8" stroke="rgba(0,0,0,.25)" stroke-width="2" stroke-linecap="round"/>
-  <ellipse class="mouth" cx="80" cy="110" rx="11" ry="5" fill="#5a1f1f"/></g></svg>`}
+  const photo=S.photos&&S.photos["iv_"+p.id];
+  if(photo)return `<div class="avphoto"><img src="${photo}" alt="${esc(p.name)}, ${esc(p.role)}"><span class="avbars" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>`;
+  const sk=p.skin,dk=shade(sk,-.22),dk2=shade(sk,-.4),lt=shade(sk,.16),lip=shade(sk,-.34),id=p.id;
+  const curls=p.style==="curls";
+  const hairBack=curls?`<path d="M72 150c-14-66 26-112 88-112s102 46 88 112c-2 40-6 78-22 104H94c-16-26-20-64-22-104z" fill="${p.hair}"/>`:"";
+  const hairTop=curls
+   ?`<path d="M86 138c-4-52 28-86 74-86s78 34 74 86c-10-30-28-46-50-52-20 16-52 20-98 52z" fill="${p.hair}"/><path d="M100 96c16-22 40-30 62-28" stroke="${shade(p.hair,.25)}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".5"/>`
+   :`<path d="M90 132c-6-48 22-80 70-80s76 32 70 80c-4-22-12-36-22-44-30 6-66 6-96 0-10 8-18 22-22 44z" fill="${p.hair}"/><path d="M92 128c2 22 6 36 10 44l-8-2c-6-12-6-28-2-42zM228 128c-2 22-6 36-10 44l8-2c6-12 6-28 2-42z" fill="${p.hair}" opacity=".85"/>`;
+  const beard=curls?"":`<path d="M104 186c6 34 26 56 56 56s50-22 56-56c-8 22-22 36-34 40-8-6-36-6-44 0-12-4-26-18-34-40z" fill="${p.hair}" opacity=".5"/>`;
+  const extra=curls?`<circle cx="92" cy="186" r="4" fill="#E9C46A"/><circle cx="228" cy="186" r="4" fill="#E9C46A"/>`:"";
+  const eye=(cx,c)=>`<g class="eye ${c}"><path d="M${cx-17} 150q17-13 34 0q-17 11-34 0z" fill="#fbfbf8"/><circle cx="${cx}" cy="150" r="7.5" fill="#3b2416"/><circle cx="${cx}" cy="150" r="3.6" fill="#0c0c0c"/><circle cx="${cx+2.6}" cy="147.4" r="1.9" fill="#fff"/><path d="M${cx-18} 150q18-15 36 0" stroke="${dk2}" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>`;
+  return `<svg viewBox="0 0 320 360" role="img" aria-label="${esc(p.name)}, ${esc(p.role)}">
+  <defs>
+   <linearGradient id="bg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DCE5E8"/><stop offset="1" stop-color="#B9C6CC"/></linearGradient>
+   <radialGradient id="fc-${id}" cx=".42" cy=".36" r=".75"><stop offset="0" stop-color="${lt}"/><stop offset=".6" stop-color="${sk}"/><stop offset="1" stop-color="${dk}"/></radialGradient>
+   <linearGradient id="nk-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${dk2}"/><stop offset="1" stop-color="${sk}"/></linearGradient>
+   <linearGradient id="jk-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(p.shirt,.12)}"/><stop offset="1" stop-color="${shade(p.shirt,-.35)}"/></linearGradient>
+  </defs>
+  <rect width="320" height="360" fill="url(#bg-${id})"/>
+  <rect x="196" y="26" width="104" height="150" rx="4" fill="#EEF4F6" opacity=".75"/><path d="M248 26v150M196 100h104" stroke="#B9C6CC" stroke-width="4"/>
+  <rect x="18" y="60" width="92" height="8" rx="2" fill="#93A2A9" opacity=".6"/><rect x="26" y="34" width="12" height="26" fill="#7C8C93" opacity=".6"/><rect x="42" y="28" width="10" height="32" fill="#A5584A" opacity=".55"/><rect x="56" y="38" width="14" height="22" fill="#5F7F6B" opacity=".6"/>
+  ${hairBack}
+  <path d="M20 360c0-58 46-82 92-90l48 30 48-30c46 8 92 32 92 90z" fill="url(#jk-${id})"/>
+  <path d="M122 268l38 60 38-60-12-10h-52z" fill="#F7F7F2"/>
+  <path d="M112 270l28 22 20 36-34-26zM208 270l-28 22-20 36 34-26z" fill="${shade(p.shirt,-.5)}" opacity=".85"/>
+  <g class="head">
+   <path d="M132 214h56v50c-8 14-48 14-56 0z" fill="url(#nk-${id})"/>
+   <ellipse cx="88" cy="160" rx="10" ry="18" fill="${dk}"/><ellipse cx="232" cy="160" rx="10" ry="18" fill="${dk}"/>${extra}
+   <path d="M90 130c0-48 30-74 70-74s70 26 70 74c0 30-4 54-18 76-12 20-30 34-52 34s-40-14-52-34c-14-22-18-46-18-76z" fill="url(#fc-${id})"/>
+   ${beard}${hairTop}
+   <path d="M112 132q18-11 36-3" stroke="${p.hair}" stroke-width="5.5" fill="none" stroke-linecap="round"/><path d="M172 129q18-8 36 3" stroke="${p.hair}" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+   ${eye(130,"l")}${eye(190,"r")}
+   <path d="M160 152c-2 16-8 26-12 32 4 6 20 6 24 0" stroke="${dk2}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".7"/>
+   <ellipse cx="112" cy="188" rx="14" ry="8" fill="#c2553f" opacity=".12"/><ellipse cx="208" cy="188" rx="14" ry="8" fill="#c2553f" opacity=".12"/>
+   <path d="M136 208q24 12 48 0q-24 22-48 0z" fill="${lip}"/>
+   <ellipse class="mouth" cx="160" cy="214" rx="17" ry="9" fill="#3a1212"/>
+   <path d="M136 208q12-7 24-2q12-5 24 2q-24 6-48 0z" fill="${shade(lip,-.15)}"/>
+   <path d="M132 206q4 3 6 3M188 206q-4 3-6 3" stroke="${dk2}" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+  </g></svg>`}
 function speakAs(text,el,onEnd){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=.95;u.onstart=()=>el&&el.classList.add("talking");u.onend=u.onerror=()=>{el&&el.classList.remove("talking");onEnd&&onEnd()};speechSynthesis.speak(u)}catch(e){onEnd&&onEnd()}}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
 let ivRec=null;
