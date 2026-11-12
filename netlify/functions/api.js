@@ -4,7 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 const sql = neon(process.env.DATABASE_URL);
-const SESSION_HOURS = 12;
+const STAFF_SESSION_HOURS = 12;
+const YOUTH_SESSION_HOURS = 8;
+const MAX_FAILED_LOGINS = 5;
+const LOCK_MINUTES = 15;
+const MAX_STATE_BYTES = 200 * 1024;
 
 let schemaReady = null;
 function ensureSchema() {
@@ -28,12 +32,13 @@ function hashSecret(secret) {
   return `scrypt$${salt}$${hash}`;
 }
 function checkSecret(secret, stored) {
-  const [kind, salt, hash] = String(stored).split('$');
+  const [kind, salt, hash] = String(stored || '').split('$');
   if (kind !== 'scrypt') return false;
   const test = crypto.scryptSync(String(secret), salt, 64);
   const want = Buffer.from(hash, 'hex');
   return want.length === test.length && crypto.timingSafeEqual(want, test);
 }
+const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 
 function sign(payload) {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -45,55 +50,68 @@ function verify(token) {
   if (!body || !sig) return null;
   const expect = crypto.createHmac('sha256', process.env.STAFF_SESSION_SECRET).update(body).digest('base64url');
   if (sig.length !== expect.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
-  const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-  if (!payload.exp || Date.now() > payload.exp) return null;
-  return payload;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch { return null; }
+}
+function bearer(event) {
+  const auth = event.headers.authorization || event.headers.Authorization || '';
+  return auth.startsWith('Bearer ') ? auth.slice(7) : '';
 }
 
 async function currentStaff(event) {
-  const auth = event.headers.authorization || event.headers.Authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const payload = verify(token);
-  if (!payload) return null;
-  const rows = await sql`SELECT id, email, name, role FROM staff WHERE id = ${payload.sid}`;
+  const p = verify(bearer(event));
+  if (!p || !p.sid) return null;
+  const rows = await sql`SELECT id, email, name, role FROM staff WHERE id = ${p.sid}`;
+  return rows[0] || null;
+}
+async function currentYouth(event) {
+  const p = verify(bearer(event));
+  if (!p || !p.yid) return null;
+  const rows = await sql`SELECT id, first_name, last_name, site, status, app_state FROM youth WHERE id = ${p.yid}`;
   return rows[0] || null;
 }
 
 async function audit(staffId, action, target) {
   await sql`INSERT INTO audit_log (staff_id, action, target) VALUES (${staffId}, ${action}, ${target})`;
 }
-
 function parseBody(event) {
   try { return event.body ? JSON.parse(event.body) : {}; } catch { return null; }
+}
+const cleanName = (s) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+const validEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e || '').trim());
+function siteBase(event) {
+  const host = event.headers['x-forwarded-host'] || event.headers.host || '';
+  return host ? `https://${host}` : '';
+}
+function newWaiverToken() {
+  const token = crypto.randomBytes(24).toString('base64url');
+  return { token, hash: sha256(token) };
+}
+function youthPublic(y) {
+  return { id: y.id, firstName: y.first_name, lastName: y.last_name, site: y.site, status: y.status };
+}
+function lessonsFromState(state) {
+  const done = [];
+  const prog = (state && state.progress) || {};
+  for (let i = 1; i <= 8; i++) if (prog['m' + i] && prog['m' + i].done) done.push(i);
+  return done;
 }
 
 exports.handler = async (event) => {
   const route = (event.path || '').replace(/^.*\/api/, '').replace(/\/+$/, '') || '/';
   const method = event.httpMethod;
 
-  // Health check: reports database problems in plain terms (no secrets).
   if (route === '/health' && method === 'GET') {
     try {
       await sql`SELECT 1 AS ok`;
       await ensureSchema();
-      const staffCount = (await sql`SELECT count(*)::int AS n FROM staff`)[0].n;
-      const sc = process.env.SETUP_CODE || '';
-      return json(200, {
-        ok: true,
-        database: 'connected',
-        staffAccounts: staffCount,
-        setupCodeSet: sc.length > 0,
-        setupCodeLength: sc.length,
-        setupCodeHasWhitespace: /\s/.test(sc),
-        sessionSecretSet: Boolean(process.env.STAFF_SESSION_SECRET),
-        setupCodeStartsWith: sc.slice(0, 2),
-        setupCodeEndsWith: sc.slice(-2),
-        check: (event.queryStringParameters && event.queryStringParameters.code !== undefined)
-          ? { typedLength: String(event.queryStringParameters.code).length, matches: String(event.queryStringParameters.code).trim() === sc.trim() }
-          : null
-      });
+      return json(200, { ok: true, database: 'connected' });
     } catch (err) {
-      return json(500, { ok: false, errorName: err.name, code: err.code || null, message: String(err.message || '').slice(0, 300) });
+      console.error(err);
+      return json(500, { ok: false, error: 'Database is not reachable' });
     }
   }
 
@@ -102,11 +120,11 @@ exports.handler = async (event) => {
     const body = parseBody(event);
     if (body === null) return json(400, { error: 'Invalid JSON' });
 
-    // First-time setup: only while there are no staff accounts, and only with SETUP_CODE.
+    /* ---------- Staff: setup and login ---------- */
     if (route === '/setup' && method === 'POST') {
       const count = (await sql`SELECT count(*)::int AS n FROM staff`)[0].n;
       if (count > 0) return json(404, { error: 'Not found' });
-      if (!process.env.SETUP_CODE) return json(403, { error: 'SETUP_CODE is not set on the server. Add it in Netlify and redeploy.' });
+      if (!process.env.SETUP_CODE) return json(403, { error: 'SETUP_CODE is not set on the server.' });
       if (String(body.setupCode || '').trim() !== process.env.SETUP_CODE.trim()) return json(403, { error: 'Setup code is wrong' });
       if (!body.email || !body.name || !body.password || body.password.length < 12) return json(400, { error: 'Name, email, and a password of at least 12 characters are required' });
       const rows = await sql`INSERT INTO staff (email, name, pass_hash, role) VALUES (${body.email.toLowerCase()}, ${body.name}, ${hashSecret(body.password)}, 'admin') RETURNING id, email, name, role`;
@@ -118,11 +136,93 @@ exports.handler = async (event) => {
       const rows = await sql`SELECT id, email, name, role, pass_hash FROM staff WHERE email = ${String(body.email || '').toLowerCase()}`;
       const s = rows[0];
       if (!s || !checkSecret(body.password || '', s.pass_hash)) return json(401, { error: 'Email or password is wrong' });
-      const token = sign({ sid: s.id, exp: Date.now() + SESSION_HOURS * 3600 * 1000 });
+      const token = sign({ sid: s.id, exp: Date.now() + STAFF_SESSION_HOURS * 3600 * 1000 });
       await audit(s.id, 'login', s.email);
       return json(200, { token, staff: { id: s.id, email: s.email, name: s.name, role: s.role } });
     }
 
+    /* ---------- Students: sign up, sign in, save progress ---------- */
+    if (route === '/student/signup' && method === 'POST') {
+      const first = cleanName(body.firstName), last = cleanName(body.lastName);
+      const site = body.site, pin = String(body.pin || ''), gEmail = String(body.guardianEmail || '').trim().toLowerCase();
+      if (!first || last.length < 2) return json(400, { error: 'Type your first name and your full last name.' });
+      if (!['jdc', 'stars'].includes(site)) return json(400, { error: 'Pick where you are.' });
+      if (!/^\d{4}$/.test(pin)) return json(400, { error: 'Your PIN needs exactly 4 numbers.' });
+      if (!validEmail(gEmail)) return json(400, { error: "Type your parent or guardian's email address." });
+      const dup = await sql`SELECT id FROM youth WHERE lower(first_name) = lower(${first}) AND lower(last_name) = lower(${last}) LIMIT 1`;
+      if (dup.length) return json(409, { error: "You're already signed up. Sign in with your PIN instead." });
+      const w = newWaiverToken();
+      const rows = await sql`
+        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, guardian_email, status, waiver_token_hash)
+        VALUES (${first}, ${last}, ${site}, ${hashSecret(pin)}, false, ${gEmail}, 'pending', ${w.hash})
+        RETURNING id, first_name, last_name, site, status`;
+      const y = rows[0];
+      await audit(null, 'student_signup', y.id);
+      const token = sign({ yid: y.id, exp: Date.now() + YOUTH_SESSION_HOURS * 3600 * 1000 });
+      return json(201, { token, youth: youthPublic(y), state: {} });
+    }
+
+    if (route === '/student/login' && method === 'POST') {
+      const first = cleanName(body.firstName), last = cleanName(body.lastName), pin = String(body.pin || '');
+      const rows = await sql`SELECT id, first_name, last_name, site, status, pin_hash, app_state, failed_logins, locked_until
+        FROM youth WHERE lower(first_name) = lower(${first}) AND lower(last_name) = lower(${last})`;
+      if (!rows.length) return json(401, { error: "That name and PIN don't match. Check the spelling or ask staff." });
+      const now = Date.now();
+      const open = rows.filter(r => !r.locked_until || new Date(r.locked_until).getTime() < now);
+      if (!open.length) return json(429, { error: 'Too many tries. Wait 15 minutes or ask staff to help.' });
+      const match = open.find(r => checkSecret(pin, r.pin_hash));
+      if (!match) {
+        for (const r of open) {
+          const fails = r.failed_logins + 1;
+          if (fails >= MAX_FAILED_LOGINS) {
+            await sql`UPDATE youth SET failed_logins = 0, locked_until = now() + make_interval(mins => ${LOCK_MINUTES}::int) WHERE id = ${r.id}`;
+          } else {
+            await sql`UPDATE youth SET failed_logins = ${fails} WHERE id = ${r.id}`;
+          }
+        }
+        return json(401, { error: "That name and PIN don't match. Check the spelling or ask staff." });
+      }
+      await sql`UPDATE youth SET failed_logins = 0, locked_until = NULL WHERE id = ${match.id}`;
+      const token = sign({ yid: match.id, exp: Date.now() + YOUTH_SESSION_HOURS * 3600 * 1000 });
+      return json(200, { token, youth: youthPublic(match), state: match.app_state || {} });
+    }
+
+    if (route === '/student/me' && (method === 'GET' || method === 'PUT')) {
+      const y = await currentYouth(event);
+      if (!y) return json(401, { error: 'Sign in again.' });
+      if (method === 'GET') return json(200, { youth: youthPublic(y), state: y.app_state || {} });
+      const state = { progress: body.progress || {}, plan: body.plan || {}, intake: body.intake || {}, jobInterests: Array.isArray(body.jobInterests) ? body.jobInterests.slice(0, 100) : [] };
+      const raw = JSON.stringify(state);
+      if (Buffer.byteLength(raw) > MAX_STATE_BYTES) return json(413, { error: 'Too much data to save.' });
+      await sql`UPDATE youth SET app_state = ${raw}::jsonb, updated_at = now() WHERE id = ${y.id}`;
+      for (const n of lessonsFromState(state)) {
+        await sql`INSERT INTO lesson_progress (youth_id, lesson) VALUES (${y.id}, ${n}) ON CONFLICT DO NOTHING`;
+      }
+      return json(200, { ok: true, status: y.status });
+    }
+
+    /* ---------- Guardian waiver (public, token-gated) ---------- */
+    const wm = route.match(/^\/waiver\/([A-Za-z0-9_-]{20,64})$/);
+    if (wm) {
+      const hash = sha256(wm[1]);
+      const rows = await sql`SELECT id, first_name, site, status FROM youth WHERE waiver_token_hash = ${hash}`;
+      const y = rows[0];
+      if (!y) return json(404, { error: 'This link is not valid or was already used. Ask Ivy Foundation staff for a new one.' });
+      if (method === 'GET') return json(200, { firstName: y.first_name, site: y.site, status: y.status });
+      if (method === 'POST') {
+        const signer = cleanName(body.signerName), relation = cleanName(body.relation);
+        if (!signer || signer.length < 3) return json(400, { error: 'Type your full name as your signature.' });
+        if (!relation) return json(400, { error: 'Tell us your relationship to the student.' });
+        if (body.agree !== true) return json(400, { error: 'Check the box to agree.' });
+        await sql`UPDATE youth SET status = 'active', consent_on_file = true, consent_date = CURRENT_DATE,
+          guardian_name = ${signer}, guardian_relation = ${relation}, waiver_signer = ${signer}, waiver_relation = ${relation},
+          waiver_signed_at = now(), waiver_method = 'online', waiver_token_hash = NULL, updated_at = now() WHERE id = ${y.id}`;
+        await audit(null, 'waiver_signed_online', y.id);
+        return json(200, { ok: true });
+      }
+    }
+
+    /* ---------- Staff-only routes ---------- */
     const staff = await currentStaff(event);
     if (!staff) return json(401, { error: 'Sign in first' });
 
@@ -130,7 +230,7 @@ exports.handler = async (event) => {
 
     if (route === '/youth' && method === 'GET') {
       const rows = await sql`
-        SELECT y.id, y.first_name, y.last_name, y.site, y.consent_on_file, y.consent_date, y.created_at,
+        SELECT y.id, y.first_name, y.last_name, y.site, y.status, y.consent_on_file, y.consent_date, y.guardian_email, y.created_at,
           (SELECT count(*)::int FROM lesson_progress p WHERE p.youth_id = y.id) AS lessons_done,
           (SELECT max(v.visited_at) FROM mentor_visits v WHERE v.youth_id = y.id) AS last_visit
         FROM youth y ORDER BY y.last_name, y.first_name`;
@@ -142,10 +242,11 @@ exports.handler = async (event) => {
       if (!body.consentOnFile || !body.guardianName || !body.guardianRelation) return json(400, { error: 'Guardian permission must be on file before an account is created' });
       if (!/^\d{4}$/.test(String(body.pin || ''))) return json(400, { error: 'PIN must be 4 digits' });
       const rows = await sql`
-        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, consent_date, guardian_name, guardian_relation, guardian_phone, interests, intake)
-        VALUES (${body.firstName}, ${body.lastName}, ${body.site}, ${hashSecret(body.pin)}, true, ${body.consentDate || new Date().toISOString().slice(0, 10)},
-                ${body.guardianName}, ${body.guardianRelation}, ${body.guardianPhone || null}, ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify(body.intake || {})}::jsonb)
-        RETURNING id, first_name, last_name, site, consent_on_file, consent_date`;
+        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, consent_date, guardian_name, guardian_relation, guardian_phone, guardian_email, status, waiver_method, interests, intake)
+        VALUES (${cleanName(body.firstName)}, ${cleanName(body.lastName)}, ${body.site}, ${hashSecret(body.pin)}, true, ${body.consentDate || new Date().toISOString().slice(0, 10)},
+                ${body.guardianName}, ${body.guardianRelation}, ${body.guardianPhone || null}, ${body.guardianEmail || null}, 'active', 'paper',
+                ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify(body.intake || {})}::jsonb)
+        RETURNING id, first_name, last_name, site, status, consent_on_file, consent_date`;
       await audit(staff.id, 'create_youth', rows[0].id);
       return json(201, { youth: rows[0] });
     }
@@ -154,6 +255,15 @@ exports.handler = async (event) => {
     if (m) {
       const id = m[1];
       const action = m[2] || '';
+      if (action === '' && method === 'GET') {
+        const rows = await sql`SELECT id, first_name, last_name, site, status, consent_on_file, consent_date, guardian_name, guardian_relation,
+          guardian_phone, guardian_email, waiver_signed_at, waiver_signer, waiver_relation, waiver_method, app_state, created_at, updated_at FROM youth WHERE id = ${id}`;
+        if (!rows.length) return json(404, { error: 'Not found' });
+        const lessons = await sql`SELECT lesson, completed_at FROM lesson_progress WHERE youth_id = ${id} ORDER BY lesson`;
+        const visits = await sql`SELECT v.visited_at, v.notes, s.name AS staff_name FROM mentor_visits v LEFT JOIN staff s ON s.id = v.staff_id WHERE v.youth_id = ${id} ORDER BY v.visited_at DESC`;
+        await audit(staff.id, 'view_youth', id);
+        return json(200, { youth: rows[0], lessons, visits });
+      }
       if (action === '' && method === 'DELETE') {
         if (staff.role !== 'admin') return json(403, { error: 'Only an admin can delete a record' });
         await sql`DELETE FROM youth WHERE id = ${id}`;
@@ -171,6 +281,30 @@ exports.handler = async (event) => {
         const rows = await sql`INSERT INTO mentor_visits (youth_id, staff_id, notes) VALUES (${id}, ${staff.id}, ${body.notes || null}) RETURNING id, visited_at`;
         await audit(staff.id, 'mentor_visit', id);
         return json(201, { visit: rows[0] });
+      }
+      if (action === '/waiver-link' && method === 'POST') {
+        const rows = await sql`SELECT status FROM youth WHERE id = ${id}`;
+        if (!rows.length) return json(404, { error: 'Not found' });
+        if (rows[0].status === 'active') return json(400, { error: 'The waiver is already signed.' });
+        const w = newWaiverToken();
+        await sql`UPDATE youth SET waiver_token_hash = ${w.hash} WHERE id = ${id}`;
+        await audit(staff.id, 'waiver_link', id);
+        return json(200, { link: `${siteBase(event)}/waiver.html?t=${w.token}` });
+      }
+      if (action === '/paper-waiver' && method === 'POST') {
+        if (staff.role !== 'admin') return json(403, { error: 'Only an admin can record a paper waiver' });
+        const signer = cleanName(body.signerName), relation = cleanName(body.relation);
+        if (!signer || !relation) return json(400, { error: "Enter the guardian's name and relationship from the paper form." });
+        await sql`UPDATE youth SET status = 'active', consent_on_file = true, consent_date = CURRENT_DATE, guardian_name = ${signer}, guardian_relation = ${relation},
+          waiver_signer = ${signer}, waiver_relation = ${relation}, waiver_signed_at = now(), waiver_method = 'paper', waiver_token_hash = NULL, updated_at = now() WHERE id = ${id}`;
+        await audit(staff.id, 'paper_waiver', id);
+        return json(200, { ok: true });
+      }
+      if (action === '/reset-pin' && method === 'POST') {
+        if (!/^\d{4}$/.test(String(body.pin || ''))) return json(400, { error: 'PIN must be 4 digits' });
+        await sql`UPDATE youth SET pin_hash = ${hashSecret(body.pin)}, failed_logins = 0, locked_until = NULL WHERE id = ${id}`;
+        await audit(staff.id, 'reset_pin', id);
+        return json(200, { ok: true });
       }
     }
 

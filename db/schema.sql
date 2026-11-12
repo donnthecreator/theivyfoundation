@@ -42,3 +42,18 @@ CREATE TABLE IF NOT EXISTS audit_log (
   target text,
   at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Student self sign-up and guardian waiver (added 2026-11-11)
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS guardian_email text;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS waiver_token_hash text;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS waiver_signed_at timestamptz;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS waiver_signer text;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS waiver_relation text;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS waiver_method text;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS app_state jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS failed_logins int NOT NULL DEFAULT 0;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS locked_until timestamptz;
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+CREATE INDEX IF NOT EXISTS youth_name_idx ON youth (lower(first_name), lower(last_name));
+CREATE UNIQUE INDEX IF NOT EXISTS youth_waiver_token_idx ON youth (waiver_token_hash) WHERE waiver_token_hash IS NOT NULL;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>The Process | Staff</title>
+<title>The Ivy Foundation | Staff</title>
 <style>
 :root{--green:#146C37;--green2:#1E8E4E;--ink:#141414;--muted:#5B5A55;--line:#E2DFD6;--paper:#F6F5F1;--card:#fff;--red:#9B1C1C}
 *{box-sizing:border-box}
@@ -39,12 +39,20 @@ th{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.0
 details summary{cursor:pointer;color:var(--green);font-weight:700;margin-bottom:10px}
 .hidden{display:none!important}
 .wrapx{overflow-x:auto}
+.sub{display:block;font-size:.82rem;color:var(--muted)}
+tr.detail td{background:#FAF9F5;padding:16px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.dgrid h3{font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+.dgrid dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 10px;margin:0;font-size:.92rem}
+.dgrid dt{color:var(--muted)}.dgrid dd{margin:0}
+.dgrid ul{margin:0;padding-left:1.1rem;font-size:.92rem}
+.warn{background:#FFF4D6;border:1px solid #E8C96A;color:#6B4E00;border-radius:7px;padding:8px 10px;font-size:.88rem;margin-bottom:10px}
 @media (max-width:640px){th:nth-child(3),td:nth-child(3){display:none}}
 </style>
 </head>
 <body>
 <header>
-  <div><h1>The Process: Staff</h1><small id="who">Not signed in</small></div>
+  <div><h1>The Ivy Foundation: Staff</h1><small id="who">Not signed in</small></div>
   <button class="ghost hidden" id="signout">Sign out</button>
 </header>
 <main>
@@ -88,6 +96,7 @@ details summary{cursor:pointer;color:var(--green);font-weight:700;margin-bottom:
           <div><label for="gn">Guardian name</label><input id="gn" required></div>
           <div><label for="gr">Relationship to youth</label><input id="gr" placeholder="Mother, father, grandparent, etc." required></div>
           <div><label for="gph">Guardian phone</label><input id="gph" type="tel"></div>
+          <div><label for="gem">Guardian email</label><input id="gem" type="email"></div>
         </div>
         <label class="check"><input type="checkbox" id="consent" required><span>The signed guardian permission form is on file.</span></label>
         <p><button type="submit">Create youth account</button></p>
@@ -96,6 +105,7 @@ details summary{cursor:pointer;color:var(--green);font-weight:700;margin-bottom:
 
     <div class="card">
       <h2>Youth</h2>
+      <p id="pendingNote" class="warn hidden"></p>
       <div class="wrapx">
         <table>
           <thead><tr><th>Name</th><th>Site</th><th>Lessons</th><th>Last visit</th><th>Actions</th></tr></thead>
@@ -198,27 +208,70 @@ function fmtDate(v) {
   return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+const INTAKE_LABELS = { age: "Age", school: "School", livesWith: "Lives with", kids: "Kids", transport: "Getting around", interests: "Interests", obstacles: "Could get in the way", dream: "Dream job", goals: "Goals" };
+function statusTag(y) {
+  return y.status === "pending"
+    ? '<span class="tag no">Waiver pending</span>'
+    : '<span class="tag">Waiver signed</span>';
+}
 function renderYouth() {
   const tb = $("rows");
+  const pending = youth.filter(y => y.status === "pending").length;
+  const pn = $("pendingNote");
+  if (pending) { pn.textContent = `${pending} ${pending === 1 ? "youth is" : "youth are"} waiting on a guardian waiver. They can do lessons, but do not share their information outside the program until it's signed.`; pn.classList.remove("hidden"); }
+  else pn.classList.add("hidden");
   if (!youth.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No youth yet. Add one above.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No youth yet. Students who sign up on a tablet will appear here, or add one above.</td></tr>';
     return;
   }
+  const admin = me && me.role === "admin";
   tb.innerHTML = youth.map(y => `
     <tr data-id="${esc(y.id)}">
-      <td><b>${esc(y.first_name)} ${esc(y.last_name)}</b><br><span class="tag ${y.consent_on_file ? "" : "no"}">${y.consent_on_file ? "Consent on file" : "No consent"}</span></td>
+      <td><b>${esc(y.first_name)} ${esc(y.last_name)}</b><br>${statusTag(y)}${y.guardian_email ? `<span class="sub">Guardian: ${esc(y.guardian_email)}</span>` : ""}</td>
       <td>${y.site === "jdc" ? "Detention Center" : "STARS Academy"}</td>
       <td>${Number(y.lessons_done || 0)} of 8</td>
       <td>${fmtDate(y.last_visit)}</td>
       <td>
         <div class="acts">
+          <button class="ghost" data-act="details">Details</button>
           <select class="lsel" aria-label="Lesson">${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}">Lesson ${n}</option>`).join("")}</select>
           <button class="ghost" data-act="lesson">Mark done</button>
           <button class="ghost" data-act="visit">Log visit</button>
-          ${me && me.role === "admin" ? '<button class="danger" data-act="delete">Delete</button>' : ""}
+          ${y.status === "pending" ? '<button class="ghost" data-act="link">Copy waiver link</button>' : ""}
+          ${y.status === "pending" && admin ? '<button class="ghost" data-act="paper">Paper waiver on file</button>' : ""}
+          <button class="ghost" data-act="pin">Reset PIN</button>
+          ${admin ? '<button class="danger" data-act="delete">Delete</button>' : ""}
         </div>
       </td>
     </tr>`).join("");
+}
+
+async function toggleDetails(row, id) {
+  const next = row.nextElementSibling;
+  if (next && next.classList.contains("detail")) { next.remove(); return; }
+  const d = await api("GET", `/youth/${id}`);
+  const y = d.youth, st = y.app_state || {}, intake = st.intake || {};
+  const intakeRows = Object.entries(INTAKE_LABELS).filter(([k]) => intake[k] !== undefined && intake[k] !== "" && !(Array.isArray(intake[k]) && !intake[k].length))
+    .map(([k, l]) => `<dt>${esc(l)}</dt><dd>${esc(Array.isArray(intake[k]) ? intake[k].join(", ") : intake[k])}</dd>`).join("");
+  const interests = (st.jobInterests || []);
+  const tr = document.createElement("tr");
+  tr.className = "detail";
+  tr.innerHTML = `<td colspan="5"><div class="dgrid">
+    <div><h3>Guardian and waiver</h3><dl>
+      <dt>Status</dt><dd>${y.status === "pending" ? "Waiting on waiver" : "Signed"}</dd>
+      ${y.waiver_signer ? `<dt>Signed by</dt><dd>${esc(y.waiver_signer)} (${esc(y.waiver_relation || "")})</dd>` : ""}
+      ${y.waiver_signed_at ? `<dt>Signed</dt><dd>${fmtDate(y.waiver_signed_at)}, ${esc(y.waiver_method || "")}</dd>` : ""}
+      ${y.guardian_name && !y.waiver_signer ? `<dt>Guardian</dt><dd>${esc(y.guardian_name)} (${esc(y.guardian_relation || "")})</dd>` : ""}
+      ${y.guardian_email ? `<dt>Email</dt><dd>${esc(y.guardian_email)}</dd>` : ""}
+      ${y.guardian_phone ? `<dt>Phone</dt><dd>${esc(y.guardian_phone)}</dd>` : ""}
+      <dt>Joined</dt><dd>${fmtDate(y.created_at)}</dd>
+    </dl></div>
+    <div><h3>Lessons done</h3>${d.lessons.length ? `<ul>${d.lessons.map(l => `<li>Lesson ${l.lesson}, ${fmtDate(l.completed_at)}</li>`).join("")}</ul>` : '<p class="sub">None yet.</p>'}
+      ${interests.length ? `<h3 style="margin-top:12px">Job interests</h3><ul>${interests.map(i => `<li>${esc(i.title || "A partner job")}${i.business ? `, ${esc(i.business)}` : ""}: ${esc(i.status || "")}</li>`).join("")}</ul>` : ""}</div>
+    <div><h3>Getting started answers</h3>${intakeRows ? `<dl>${intakeRows}</dl>` : '<p class="sub">Not finished yet.</p>'}</div>
+    <div><h3>Mentor visits</h3>${d.visits.length ? `<ul>${d.visits.map(v => `<li>${fmtDate(v.visited_at)}${v.staff_name ? `, ${esc(v.staff_name)}` : ""}${v.notes ? `: ${esc(v.notes)}` : ""}</li>`).join("")}</ul>` : '<p class="sub">None logged.</p>'}</div>
+  </div></td>`;
+  row.after(tr);
 }
 
 $("rows").onclick = async (e) => {
@@ -228,6 +281,32 @@ $("rows").onclick = async (e) => {
   const id = row.dataset.id;
   const act = btn.dataset.act;
   try {
+    if (act === "details") { await toggleDetails(row, id); return; }
+    if (act === "link") {
+      const d = await api("POST", `/youth/${id}/waiver-link`);
+      let copied = false;
+      try { await navigator.clipboard.writeText(d.link); copied = true; } catch (e) {}
+      if (copied) say("Waiver link copied. Paste it into a text or email to the guardian. Each new link replaces the last one.", "ok");
+      else prompt("Copy this link and send it to the guardian:", d.link);
+      return;
+    }
+    if (act === "paper") {
+      const signer = prompt("Guardian's name, exactly as signed on the paper form:", "");
+      if (!signer) return;
+      const relation = prompt("Their relationship to the student:", "");
+      if (!relation) return;
+      await api("POST", `/youth/${id}/paper-waiver`, { signerName: signer.trim(), relation: relation.trim() });
+      say("Paper waiver recorded. Keep the signed form on file.", "ok");
+      await loadYouth(); return;
+    }
+    if (act === "pin") {
+      const pin = prompt("New 4-digit PIN for this student:", "");
+      if (pin === null) return;
+      if (!/^\d{4}$/.test(pin.trim())) { say("The PIN must be exactly 4 digits."); return; }
+      await api("POST", `/youth/${id}/reset-pin`, { pin: pin.trim() });
+      say("PIN reset. This also unlocks the account if it was locked.", "ok");
+      return;
+    }
     if (act === "lesson") {
       const lesson = Number(row.querySelector(".lsel").value);
       await api("POST", `/youth/${id}/lesson`, { lesson });
@@ -259,6 +338,7 @@ $("youthForm").onsubmit = async (e) => {
       guardianName: $("gn").value.trim(),
       guardianRelation: $("gr").value.trim(),
       guardianPhone: $("gph").value.trim() || null,
+      guardianEmail: $("gem").value.trim() || null,
       consentOnFile: $("consent").checked
     });
     e.target.reset();

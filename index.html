@@ -697,7 +697,45 @@ function blank(){return {youth:[],logs:[],partners:[],jobs:[],interests:[],conta
 let S=blank();
 try{const raw=localStorage.getItem(KEY); if(raw){const d=JSON.parse(raw); S=Object.assign(blank(),d);S.photos=S.photos||{};S.leads=S.leads||[];}}catch(e){}
 let saveNote="";
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S)); saveNote="";}catch(e){saveNote="Progress could not be saved on this device. Keep this page open until staff can help.";}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S)); saveNote="";}catch(e){saveNote="Progress could not be saved on this device. Keep this page open until staff can help.";}try{queuePush()}catch(e){}}
+
+/* ---------- Server sync (live site only; the preview runs on this device alone) ---------- */
+const IVY_API="/api";
+let apiOn=null,yToken=null,pushT=null;
+try{yToken=sessionStorage.getItem("ivy_yt")}catch(e){}
+async function apiCheck(){
+  if(apiOn!==null)return apiOn;
+  if(!/^https?:$/.test(location.protocol)){apiOn=false;return false}
+  try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),5000);const r=await fetch(IVY_API+"/health",{signal:ctl.signal});clearTimeout(t);const d=await r.json();apiOn=!!d.ok}catch(e){apiOn=false}
+  return apiOn}
+async function apiCall(method,route,body,token){
+  const h={"Content-Type":"application/json"};if(token)h.Authorization="Bearer "+token;
+  const r=await fetch(IVY_API+route,{method,headers:h,body:body?JSON.stringify(body):undefined});
+  let d={};try{d=await r.json()}catch(e){}
+  return {status:r.status,ok:r.ok,data:d}}
+function setYToken(t){yToken=t;try{t?sessionStorage.setItem("ivy_yt",t):sessionStorage.removeItem("ivy_yt")}catch(e){}}
+function statePayload(v){return {progress:v.progress||{},plan:v.plan||{},intake:v.intake||{},jobInterests:S.interests.filter(i=>i.youthId===v.id).map(i=>{const j=S.jobs.find(x=>x.id===i.jobId)||{};const pr=j.partnerId?S.partners.find(x=>x.id===j.partnerId):null;return {jobId:i.jobId,title:j.title||"",business:pr?pr.name:"",date:i.date,status:i.status}})}}
+function pushNow(){
+  clearTimeout(pushT);pushT=null;
+  if(typeof session==="undefined"||session.role!=="youth"||!yToken)return;
+  const v=y(session.id);if(!v||!v.serverId)return;
+  const tok=yToken;
+  apiCall("PUT","/student/me",statePayload(v),tok).then(r=>{if(r.status===401&&yToken===tok)setYToken(null);else if(r.ok&&r.data.status&&v.status!==r.data.status){v.status=r.data.status;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}}).catch(()=>{})}
+function queuePush(){if(typeof session==="undefined"||session.role!=="youth"||!yToken)return;clearTimeout(pushT);pushT=setTimeout(pushNow,1200)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&pushT)pushNow()});
+function upsertServerYouth(yo,state){
+  let v=S.youth.find(x=>x.serverId===yo.id);
+  if(!v){v={id:yo.id,created:today(),progress:{},plan:{}};S.youth.push(v)}
+  v.serverId=yo.id;v.first=yo.firstName;v.last=yo.lastName;v.name=yo.firstName+" "+yo.lastName;v.site=yo.site;v.status=yo.status;delete v.pin;
+  const st=state||{};
+  const serverHasWork=st.progress&&Object.keys(st.progress).length;
+  if(serverHasWork){v.progress=st.progress;v.plan=st.plan||{};if(st.intake&&Object.keys(st.intake).length)v.intake=st.intake}
+  else if(st.intake&&Object.keys(st.intake).length&&!v.intake)v.intake=st.intake;
+  (st.jobInterests||[]).forEach(ji=>{if(!S.interests.some(i=>i.youthId===v.id&&i.jobId===ji.jobId))S.interests.push({id:uid(),youthId:v.id,jobId:ji.jobId,date:ji.date||today(),status:ji.status||"Interested",note:""})});
+  return v}
+function startServerSession(d){setYToken(d.token);const v=upsertServerYouth(d.youth,d.state);session={role:"youth",id:v.id};save();if(!(d.state&&d.state.progress&&Object.keys(d.state.progress).length))queuePush();return v}
+function signOutAll(){if(pushT)pushNow();setYToken(null);session={role:null,id:null};go("welcome")}
+apiCheck();
 
 /* ---------- Helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -731,7 +769,7 @@ function renderWho(){
   wireNav();
   const w=$("#who");
   const w2=$("#who2");
-  if(session.role){w.innerHTML=`<button class="linkbtn" id="signout">Sign out</button>`;w2.innerHTML=`<button class="l" id="signout2">Sign out</button>`;$("#signout").onclick=$("#signout2").onclick=()=>{session={role:null,id:null};go("welcome")}}
+  if(session.role){w.innerHTML=`<button class="linkbtn" id="signout">Sign out</button>`;w2.innerHTML=`<button class="l" id="signout2">Sign out</button>`;$("#signout").onclick=$("#signout2").onclick=()=>signOutAll()}
   else {w.innerHTML="";w2.innerHTML=""}
 }
 
@@ -982,7 +1020,10 @@ function bindPad(onFull){
   });
 }
 function youthPin(){const v=y(view.id);return `<h2>Hi, ${esc(v.name)}.</h2><p>Enter your 4 digit PIN.</p>${pinpad()}${view.err?`<p class="err">${esc(view.err)}</p>`:""}<button class="linkbtn" id="back">Not you? Go back</button><p class="hint">Forgot your PIN? Ask staff to reset it.</p>`}
-bind.youthPin=()=>{bindPad(()=>{const v=y(view.id);if(v.pin===view.pin){session={role:"youth",id:v.id};go("youthHome")}else{view.pin="";view.err="That PIN doesn't match. Try again.";render()}});$("#back").onclick=()=>go("youthSignin",{err:""})};
+bind.youthPin=()=>{bindPad(async()=>{const v=y(view.id);
+  if(v.serverId&&await apiCheck()){let r;try{r=await apiCall("POST","/student/login",{firstName:v.first||v.name.split(" ")[0],lastName:v.last||v.name.split(" ").slice(1).join(" "),pin:view.pin})}catch(e){r=null}
+    if(r&&r.ok){startServerSession(r.data);go("youthHome")}else{view.pin="";view.err=r?(r.data.error||"That PIN doesn't match. Try again."):"We couldn't reach the server. Try again.";render()}return}
+  if(v.pin&&v.pin===view.pin){session={role:"youth",id:v.id};go("youthHome")}else{view.pin="";view.err="That PIN doesn't match. Try again.";render()}});$("#back").onclick=()=>go("youthSignin",{err:""})};
 
 function youthSignin(){return `<h2>Welcome back.</h2><p>Type your first and last name the way you signed up, then your PIN.</p>
  <div class="row" style="gap:1rem;align-items:flex-end"><div class="grow"><label for="si-f">First name</label><input id="si-f" autocomplete="off" maxlength="30"></div><div class="grow"><label for="si-l">Last name</label><input id="si-l" autocomplete="off" maxlength="40"></div></div>
@@ -992,7 +1033,14 @@ function youthSignin(){return `<h2>Welcome back.</h2><p>Type your first and last
  <p class="hint" style="margin-top:1rem">Forgot your PIN? Ask staff to reset it. New here? <button class="linkbtn" id="new">Get started</button></p>`}
 bind.youthSignin=()=>{
   $("#back").onclick=()=>go("studentChoose");$("#new").onclick=()=>go("studentChoose");
-  const tryIt=()=>{const n=($("#si-f").value+" "+$("#si-l").value).trim().toLowerCase().replace(/\s+/g," "),pin=$("#si-p").value;
+  const tryIt=async()=>{
+    if(await apiCheck()){
+      const f=$("#si-f").value.trim(),l=$("#si-l").value.trim(),pin=$("#si-p").value;
+      let r;try{r=await apiCall("POST","/student/login",{firstName:f,lastName:l,pin})}catch(e){r=null}
+      if(!r){view.err="We couldn't reach the server. Check the internet connection and try again.";render();return}
+      if(!r.ok){view.err=r.data.error||"That name and PIN don't match.";render();return}
+      startServerSession(r.data);go("youthHome");return}
+    const n=($("#si-f").value+" "+$("#si-l").value).trim().toLowerCase().replace(/\s+/g," "),pin=$("#si-p").value;
     const v=S.youth.find(x=>x.name.toLowerCase().replace(/\s+/g," ")===n&&x.pin===pin);
     if(v){session={role:"youth",id:v.id};go("youthHome")}else{view.err="That name and PIN don't match. Check the spelling or ask staff.";render()}};
   $("#si-go").onclick=tryIt;$("#si-p").onkeydown=e=>{if(e.key==="Enter")tryIt()};
@@ -1002,6 +1050,8 @@ function youthNew(){return `<div class="player"><div class="steps" aria-hidden="
  <h2 style="margin-top:.8rem">Let's get you started.</h2><p>Use your real first and last name so your mentor can find you. Pick a 4 digit PIN you'll remember and don't share it. Next we'll ask a few questions so we can match you with the right help and jobs.</p>
  <div class="row" style="gap:1rem;align-items:flex-end"><div class="grow"><label for="fn">First name</label><input id="fn" autocomplete="off" maxlength="30" placeholder="Example: Marcus"></div><div class="grow"><label for="ln">Last name</label><input id="ln" autocomplete="off" maxlength="40" placeholder="Example: Thompson"></div></div>
  <label for="site">Where are you?</label><select id="site"><option value="jdc" ${view.site==="jdc"?"selected":""}>${SITES.jdc.name}</option><option value="stars" ${view.site==="stars"?"selected":""}>${SITES.stars.name}</option></select>
+ <label for="ge">Parent or guardian's email</label><input id="ge" type="email" autocomplete="off" maxlength="120" placeholder="Example: mom@email.com">
+ <p class="hint" style="margin-top:.3rem">We'll email them a permission form. You can start your lessons right away. We won't share anything about you outside the program until they sign.</p>
  <label for="p1">4 digit PIN</label><input id="p1" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
  <label for="p2">Type the PIN again</label><input id="p2" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
  ${view.err?`<p class="err">${esc(view.err)}</p>`:""}${view.err&&view.dupName?`<button class="btn" id="todup" style="margin-top:.4rem">Sign in as ${esc(view.dupName)}</button><p class="hint">Not you? Add your middle initial after your first name and tap Next.</p>`:""}
@@ -1010,15 +1060,24 @@ function youthNew(){return `<div class="player"><div class="steps" aria-hidden="
 bind.youthNew=()=>{
   $("#back").onclick=()=>go("studentChoose");$("#signin").onclick=()=>go("youthSignin",{err:""});
   const td=$("#todup");if(td)td.onclick=()=>{const n=view.dupName;go("youthSignin",{err:""});const f=$("#si-f"),l=$("#si-l");if(f&&l){const i=n.lastIndexOf(" ");f.value=i>0?n.slice(0,i):n;l.value=i>0?n.slice(i+1):"";$("#si-p").focus()}};
-  $("#mk").onclick=()=>{
-    const fn=$("#fn").value.trim().replace(/\s+/g," "),ln=$("#ln").value.trim().replace(/\s+/g," "),nm=(fn+" "+ln).trim(),p1=$("#p1").value,p2=$("#p2").value;
+  $("#mk").onclick=async()=>{
+    const ge=$("#ge").value.trim();const fn=$("#fn").value.trim().replace(/\s+/g," "),ln=$("#ln").value.trim().replace(/\s+/g," "),nm=(fn+" "+ln).trim(),p1=$("#p1").value,p2=$("#p2").value;
     let err="";
     if(fn.length<1||ln.length<2)err="Type your first name and your full last name.";
     else if(!/^\d{4}$/.test(p1))err="Your PIN needs exactly 4 numbers.";
     else if(p1!==p2)err="The two PINs don't match.";
+    else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(ge))err="Type your parent or guardian's email address.";
     else if(S.youth.some(v=>v.name.toLowerCase()===nm.toLowerCase())){view.dupName=nm;err="You're already signed up on this tablet. Sign in with your PIN instead.";}
     if(err){view.err=err;render();return}
-    const v={id:uid(),name:nm,first:fn,last:ln,pin:p1,site:$("#site").value,created:today(),progress:{},plan:{}};
+    const site=$("#site").value;
+    if(await apiCheck()){
+      const b=$("#mk");b.disabled=true;b.textContent="Saving...";
+      let r;try{r=await apiCall("POST","/student/signup",{firstName:fn,lastName:ln,site,pin:p1,guardianEmail:ge})}catch(e){r=null}
+      if(!r){view.err="We couldn't reach the server. Check the internet connection and tap Next again.";render();return}
+      if(r.status===409){view.dupName=nm;view.err="You're already signed up. Sign in with your PIN instead.";render();return}
+      if(!r.ok){view.err=r.data.error||"Something went wrong. Ask staff for help.";render();return}
+      startServerSession(r.data);go("youthHome");return}
+    const v={id:uid(),name:nm,first:fn,last:ln,pin:p1,site,guardianEmail:ge,status:"pending",created:today(),progress:{},plan:{}};
     S.youth.push(v);save();session={role:"youth",id:v.id};go("youthHome");
   };
 };
@@ -1033,7 +1092,7 @@ function youthHome(){
     return ph+`<li class="stop ${cls}"><span class="dot" aria-hidden="true">${pr?.done?"&#10003;":i+1}</span>
      <button class="stopbtn" data-m="${m.id}"><b>${esc(titleFor(m,siteOf(v)))}</b><span class="phase">${m.min} minutes. ${pr?.done?"Done.":pr?"In progress.":"Not started."}</span><br><span class="muted" style="font-size:1rem">${esc(m.goal)}</span></button></li>`}).join("");
   const pct=done/MODULES.length*100;
-  return `<h2>${esc(v.name.split(" ")[0])}, you're ${done} of ${MODULES.length} stops in.</h2>
+  return `${v.status==="pending"?`<div class="note" style="margin-bottom:1rem"><b>Waiting on your parent's permission.</b> We sent a permission form to the email you gave us. Keep doing your lessons. Until it's signed, we won't share anything about you outside the program, including with employers.</div>`:""}<h2>${esc(v.name.split(" ")[0])}, you're ${done} of ${MODULES.length} stops in.</h2>
    <div class="row">${next?`<button class="btn sig" data-m="${next.id}" id="cont">${v.progress[next.id]?"Keep going":"Start"}: ${esc(titleFor(next,siteOf(v)))}</button>`:`<p class="ok">You finished every stop. Go over your plan with your mentor.</p>`}<button class="btn ghost" id="myplan">My plan</button><button class="btn ghost" id="jobs">Jobs</button><button class="btn ghost" id="ivbtn">Practice interview</button><button class="linkbtn" id="redo">Update my info</button></div>
    <ol class="path" style="--p:${pct}"><span class="fill" style="height:calc(${pct}% - 20px)" aria-hidden="true"></span>${stops}</ol>`}
 bind.youthHome=()=>{document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>go("module",{m:b.dataset.m,pick:null}));$("#myplan").onclick=()=>go("plan");$("#jobs").onclick=()=>go("jobs",{f:"All"});$("#ivbtn").onclick=()=>go("interview",{stage:"pick"});$("#redo").onclick=()=>go("intake",{step:0})};
@@ -1146,7 +1205,7 @@ function jobCard(j,v){
   ${tags?`<p class="row" style="gap:.4rem;margin:0 0 .7rem">${tags}</p>`:""}
   ${j.desc?`<p>${esc(j.desc)}</p>`:""}
   <dl class="facts">${j.pay?`<dt>Pay</dt><dd>${esc(j.pay)}</dd>`:""}${j.schedule?`<dt>Hours</dt><dd>${esc(j.schedule)}</dd>`:""}${j.minAge?`<dt>Age</dt><dd>${esc(j.minAge)} and up</dd>`:""}${j.reqs?`<dt>You'll need</dt><dd>${esc(j.reqs)}</dd>`:""}</dl>
-  ${v?(has?`<p class="ok">You said you're interested. Staff will follow up with you.</p>`:tooYoung(j,v)?`<p class="muted">You can apply when you turn ${esc(j.minAge)}. Tell your mentor if you want to be first in line.</p><button class="btn ghost" data-int="${j.id}">Save my spot</button>`:`<button class="btn sig" data-int="${j.id}">I'm interested</button>`):""}</article>`}
+  ${v?(has?(v.status==="pending"?`<p class="ok">Saved. Staff will follow up once your parent signs the permission form.</p>`:`<p class="ok">You said you're interested. Staff will follow up with you.</p>`):tooYoung(j,v)?`<p class="muted">You can apply when you turn ${esc(j.minAge)}. Tell your mentor if you want to be first in line.</p><button class="btn ghost" data-int="${j.id}">Save my spot</button>`:`<button class="btn sig" data-int="${j.id}">I'm interested</button>`):""}</article>`}
 function jobsView(){
   const v=y(session.id),f=view.f||"All";
   const score=j=>(jobFit(j,v)?2:0)+(tooYoung(j,v)?-3:0)+(needsRide(v)&&partnerOf(j).busRoute?1:0);
@@ -1161,7 +1220,7 @@ function jobsView(){
 bind.jobs=()=>{
   $("#back").onclick=()=>go("youthHome");
   document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>go("jobs",{f:b.dataset.f}));
-  document.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{S.interests.push({id:uid(),youthId:session.id,jobId:b.dataset.int,date:today(),status:"Interested",note:""});save();view.y=window.scrollY;render();window.scrollTo(0,view.y)});
+  document.querySelectorAll("[data-int]").forEach(b=>b.onclick=()=>{S.interests.push({id:uid(),youthId:session.id,jobId:b.dataset.int,date:today(),status:y(session.id).status==="pending"?"Waiting on permission":"Interested",note:""});save();view.y=window.scrollY;render();window.scrollTo(0,view.y)});
 };
 function aboutView(){
   return `<div class="ej-feature" style="min-height:min(46vh,380px)"><img src="${photoOf("community")}" alt="Speakers and community partners at an Ivy Foundation forum at STARS Academy"><div class="t"><h1>Every kid deserves a way back.</h1><button class="ej-arrow" id="ab-down" aria-label="Read about The Process">&rarr;</button></div></div>
