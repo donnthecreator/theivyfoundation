@@ -68,14 +68,24 @@ function parseBody(event) {
 }
 
 exports.handler = async (event) => {
+  const route = (event.path || '').replace(/^.*\/api/, '').replace(/\/+$/, '') || '/';
+  const method = event.httpMethod;
+
+  // Health check: reports database problems in plain terms (no secrets).
+  if (route === '/health' && method === 'GET') {
+    try {
+      await sql`SELECT 1 AS ok`;
+      await ensureSchema();
+      return json(200, { ok: true, database: 'connected' });
+    } catch (err) {
+      return json(500, { ok: false, errorName: err.name, code: err.code || null, message: String(err.message || '').slice(0, 300) });
+    }
+  }
+
   try {
     await ensureSchema();
-    const route = (event.path || '').replace(/^.*\/api/, '').replace(/\/+$/, '') || '/';
-    const method = event.httpMethod;
     const body = parseBody(event);
     if (body === null) return json(400, { error: 'Invalid JSON' });
-
-    if (route === '/health' && method === 'GET') return json(200, { ok: true });
 
     // First-time setup: only while there are no staff accounts, and only with SETUP_CODE.
     if (route === '/setup' && method === 'POST') {
