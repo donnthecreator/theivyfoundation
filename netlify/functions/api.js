@@ -90,6 +90,15 @@ function newWaiverToken() {
   const token = crypto.randomBytes(24).toString('base64url');
   return { token, hash: sha256(token) };
 }
+function validAge(a) {
+  const n = Number(a);
+  return Number.isInteger(n) && n >= 13 && n <= 19 ? n : null;
+}
+function validPhone(p) {
+  const text = String(p || '').trim();
+  const digits = text.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15 && text.length <= 30 ? text : null;
+}
 function partnerView(y) {
   const jobs = ((y.app_state && y.app_state.jobInterests) || []).map(i => ({
     title: i.title || 'A partner job', business: i.business || null, status: i.status || ''
@@ -163,16 +172,19 @@ exports.handler = async (event) => {
     if (route === '/student/signup' && method === 'POST') {
       const first = cleanName(body.firstName), last = cleanName(body.lastName);
       const site = body.site, pin = String(body.pin || ''), gEmail = String(body.guardianEmail || '').trim().toLowerCase();
+      const age = validAge(body.age), gPhone = validPhone(body.guardianPhone);
       if (!first || last.length < 2) return json(400, { error: 'Type your first name and your full last name.' });
       if (!['jdc', 'stars'].includes(site)) return json(400, { error: 'Pick where you are.' });
+      if (!age) return json(400, { error: 'Pick your age.' });
       if (!/^\d{4}$/.test(pin)) return json(400, { error: 'Your PIN needs exactly 4 numbers.' });
       if (!validEmail(gEmail)) return json(400, { error: "Type your parent or guardian's email address." });
+      if (!gPhone) return json(400, { error: "Type your parent or guardian's phone number." });
       const dup = await sql`SELECT id FROM youth WHERE lower(first_name) = lower(${first}) AND lower(last_name) = lower(${last}) LIMIT 1`;
       if (dup.length) return json(409, { error: "You're already signed up. Sign in with your PIN instead." });
       const w = newWaiverToken();
       const rows = await sql`
-        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, guardian_email, status, waiver_token_hash)
-        VALUES (${first}, ${last}, ${site}, ${hashSecret(pin)}, false, ${gEmail}, 'pending', ${w.hash})
+        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, guardian_email, guardian_phone, status, waiver_token_hash, intake)
+        VALUES (${first}, ${last}, ${site}, ${hashSecret(pin)}, false, ${gEmail}, ${gPhone}, 'pending', ${w.hash}, ${JSON.stringify({ age })}::jsonb)
         RETURNING id, first_name, last_name, site, status`;
       const y = rows[0];
       await audit(null, 'student_signup', y.id);
@@ -345,11 +357,14 @@ exports.handler = async (event) => {
       if (!body.firstName || !body.lastName || !['jdc', 'stars'].includes(body.site)) return json(400, { error: 'First name, last name, and site (jdc or stars) are required' });
       if (!body.consentOnFile || !body.guardianName || !body.guardianRelation) return json(400, { error: 'Guardian permission must be on file before an account is created' });
       if (!/^\d{4}$/.test(String(body.pin || ''))) return json(400, { error: 'PIN must be 4 digits' });
+      const age = validAge(body.age), gPhone = validPhone(body.guardianPhone);
+      if (!age) return json(400, { error: 'Pick the youth age (13 to 19).' });
+      if (!gPhone) return json(400, { error: "Type the guardian's phone number." });
       const rows = await sql`
         INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, consent_date, guardian_name, guardian_relation, guardian_phone, guardian_email, status, waiver_method, interests, intake)
         VALUES (${cleanName(body.firstName)}, ${cleanName(body.lastName)}, ${body.site}, ${hashSecret(body.pin)}, true, ${body.consentDate || new Date().toISOString().slice(0, 10)},
-                ${body.guardianName}, ${body.guardianRelation}, ${body.guardianPhone || null}, ${body.guardianEmail || null}, 'active', 'paper',
-                ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify(body.intake || {})}::jsonb)
+                ${body.guardianName}, ${body.guardianRelation}, ${gPhone}, ${body.guardianEmail || null}, 'active', 'paper',
+                ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify({ ...(body.intake || {}), age })}::jsonb)
         RETURNING id, first_name, last_name, site, status, consent_on_file, consent_date`;
       if (staff.role === 'staff') {
         await sql`INSERT INTO staff_youth (staff_id, youth_id) VALUES (${staff.id}, ${rows[0].id}) ON CONFLICT DO NOTHING`;

@@ -1050,7 +1050,9 @@ function youthNew(){return `<div class="player"><div class="steps" aria-hidden="
  <h2 style="margin-top:.8rem">Let's get you started.</h2><p>Use your real first and last name so your mentor can find you. Pick a 4 digit PIN you'll remember and don't share it. Next we'll ask a few questions so we can match you with the right help and jobs.</p>
  <div class="row" style="gap:1rem;align-items:flex-end"><div class="grow"><label for="fn">First name</label><input id="fn" autocomplete="off" maxlength="30" placeholder="Example: Marcus"></div><div class="grow"><label for="ln">Last name</label><input id="ln" autocomplete="off" maxlength="40" placeholder="Example: Thompson"></div></div>
  <label for="site">Where are you?</label><select id="site"><option value="jdc" ${view.site==="jdc"?"selected":""}>${SITES.jdc.name}</option><option value="stars" ${view.site==="stars"?"selected":""}>${SITES.stars.name}</option></select>
+ <label for="sage">How old are you?</label><select id="sage"><option value="">Choose your age</option>${["13","14","15","16","17","18","19"].map(a=>`<option value="${a}">${a}</option>`).join("")}</select>
  <label for="ge">Parent or guardian's email</label><input id="ge" type="email" autocomplete="off" maxlength="120" placeholder="Example: mom@email.com">
+ <label for="gph">Parent or guardian's phone number</label><input id="gph" type="tel" autocomplete="off" maxlength="30" placeholder="Example: 205-555-0123">
  <p class="hint" style="margin-top:.3rem">We'll email them a permission form. You can start your lessons right away. We won't share anything about you outside the program until they sign.</p>
  <label for="p1">4 digit PIN</label><input id="p1" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
  <label for="p2">Type the PIN again</label><input id="p2" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
@@ -1061,23 +1063,25 @@ bind.youthNew=()=>{
   $("#back").onclick=()=>go("studentChoose");$("#signin").onclick=()=>go("youthSignin",{err:""});
   const td=$("#todup");if(td)td.onclick=()=>{const n=view.dupName;go("youthSignin",{err:""});const f=$("#si-f"),l=$("#si-l");if(f&&l){const i=n.lastIndexOf(" ");f.value=i>0?n.slice(0,i):n;l.value=i>0?n.slice(i+1):"";$("#si-p").focus()}};
   $("#mk").onclick=async()=>{
-    const ge=$("#ge").value.trim();const fn=$("#fn").value.trim().replace(/\s+/g," "),ln=$("#ln").value.trim().replace(/\s+/g," "),nm=(fn+" "+ln).trim(),p1=$("#p1").value,p2=$("#p2").value;
+    const ge=$("#ge").value.trim();const gp=$("#gph").value.trim(),age=$("#sage").value;const fn=$("#fn").value.trim().replace(/\s+/g," "),ln=$("#ln").value.trim().replace(/\s+/g," "),nm=(fn+" "+ln).trim(),p1=$("#p1").value,p2=$("#p2").value;
     let err="";
     if(fn.length<1||ln.length<2)err="Type your first name and your full last name.";
     else if(!/^\d{4}$/.test(p1))err="Your PIN needs exactly 4 numbers.";
     else if(p1!==p2)err="The two PINs don't match.";
     else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(ge))err="Type your parent or guardian's email address.";
+    else if(gp.replace(/\D/g,"").length<10)err="Type your parent or guardian's phone number.";
+    else if(!age)err="Pick your age.";
     else if(S.youth.some(v=>v.name.toLowerCase()===nm.toLowerCase())){view.dupName=nm;err="You're already signed up on this tablet. Sign in with your PIN instead.";}
     if(err){view.err=err;render();return}
     const site=$("#site").value;
     if(await apiCheck()){
       const b=$("#mk");b.disabled=true;b.textContent="Saving...";
-      let r;try{r=await apiCall("POST","/student/signup",{firstName:fn,lastName:ln,site,pin:p1,guardianEmail:ge})}catch(e){r=null}
+      let r;try{r=await apiCall("POST","/student/signup",{firstName:fn,lastName:ln,site,pin:p1,age:+age,guardianEmail:ge,guardianPhone:gp})}catch(e){r=null}
       if(!r){view.err="We couldn't reach the server. Check the internet connection and tap Next again.";render();return}
       if(r.status===409){view.dupName=nm;view.err="You're already signed up. Sign in with your PIN instead.";render();return}
       if(!r.ok){view.err=r.data.error||"Something went wrong. Ask staff for help.";render();return}
       startServerSession(r.data);go("youthHome");return}
-    const v={id:uid(),name:nm,first:fn,last:ln,pin:p1,site,guardianEmail:ge,status:"pending",created:today(),progress:{},plan:{}};
+    const v={id:uid(),name:nm,first:fn,last:ln,pin:p1,site,guardianEmail:ge,guardianPhone:gp,intake:{age:+age},status:"pending",created:today(),progress:{},plan:{}};
     S.youth.push(v);save();session={role:"youth",id:v.id};go("youthHome");
   };
 };

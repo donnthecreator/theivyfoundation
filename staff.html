@@ -52,7 +52,16 @@ tr.detail td{background:#FAF9F5;padding:16px}
 </head>
 <body>
 <header>
-  <div><h1>The Ivy Foundation: Staff</h1><small id="who">Not signed in</small></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <svg width="44" height="44" viewBox="0 0 400 400" role="img" aria-label="The Ivy Foundation pillars" style="flex:none">
+      <rect x="80" y="90" width="40" height="190" fill="#4A4A4A"></rect>
+      <rect x="146" y="90" width="40" height="190" fill="#000000"></rect>
+      <rect x="214" y="90" width="40" height="190" fill="#000000"></rect>
+      <rect x="280" y="90" width="40" height="190" fill="#000000"></rect>
+      <rect x="60" y="300" width="280" height="22" fill="#000000"></rect>
+    </svg>
+    <div><h1>The Ivy Foundation: Staff</h1><small id="who">Not signed in</small></div>
+  </div>
   <button class="ghost hidden" id="signout">Sign out</button>
 </header>
 <main>
@@ -91,11 +100,12 @@ tr.detail td{background:#FAF9F5;padding:16px}
           <div><label for="yl">Last name</label><input id="yl" required></div>
           <div><label for="ys">Site</label><select id="ys"><option value="jdc">Juvenile Detention Center</option><option value="stars">STARS Academy</option></select></div>
           <div><label for="yp">4-digit PIN for the tablet</label><input id="yp" inputmode="numeric" pattern="\d{4}" maxlength="4" required></div>
+          <div><label for="yage">Age</label><select id="yage" required><option value="">Choose</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>19</option></select></div>
         </div>
         <div class="row" style="margin-top:6px">
           <div><label for="gn">Guardian name</label><input id="gn" required></div>
           <div><label for="gr">Relationship to youth</label><input id="gr" placeholder="Mother, father, grandparent, etc." required></div>
-          <div><label for="gph">Guardian phone</label><input id="gph" type="tel"></div>
+          <div><label for="gph">Guardian phone</label><input id="gph" type="tel" required></div>
           <div><label for="gem">Guardian email</label><input id="gem" type="email"></div>
         </div>
         <label class="check"><input type="checkbox" id="consent" required><span>The signed guardian permission form is on file.</span></label>
@@ -392,15 +402,18 @@ $("rows").onclick = async (e) => {
 $("youthForm").onsubmit = async (e) => {
   e.preventDefault();
   if (!/^\d{4}$/.test($("yp").value)) { say("The PIN must be exactly 4 digits."); return; }
+  if (!$("yage").value) { say("Choose the youth's age."); return; }
+  if ($("gph").value.replace(/\D/g, "").length < 10) { say("Type the guardian's phone number."); return; }
   try {
     await api("POST", "/youth", {
       firstName: $("yf").value.trim(),
       lastName: $("yl").value.trim(),
       site: $("ys").value,
       pin: $("yp").value,
+      age: +$("yage").value,
       guardianName: $("gn").value.trim(),
       guardianRelation: $("gr").value.trim(),
-      guardianPhone: $("gph").value.trim() || null,
+      guardianPhone: $("gph").value.trim(),
       guardianEmail: $("gem").value.trim() || null,
       consentOnFile: $("consent").checked
     });
