@@ -6,3 +6,8 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/staff.html"
+  status = 200
