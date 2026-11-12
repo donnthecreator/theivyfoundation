@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Sim: Your First Year | The Ivy Foundation</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;margin:0;background:#F6F7F4;color:#1d1d1d;line-height:1.45}
+main{max-width:760px;margin:0 auto;padding:1.2rem}
+h1{font-size:1.7rem;margin:.3rem 0}
+h2{font-size:1.2rem;margin:.2rem 0 .6rem}
+.card{background:#fff;border:1px solid #dcdfd6;border-radius:14px;padding:1rem 1.1rem;margin:.8rem 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem}
+.stat b{display:block;font-size:1.4rem}
+.stat span,.muted{font-size:.9rem;color:#555}
+label{display:block;font-weight:600;margin:.7rem 0 .25rem}
+select,input{font-size:1rem;padding:.5rem;border:1px solid #aaa;border-radius:8px;width:100%;max-width:360px;box-sizing:border-box}
+button{font-size:1rem;padding:.6rem 1rem;border-radius:999px;border:0;background:#0C3B22;color:#fff;cursor:pointer;font-weight:700;margin:.3rem .3rem .3rem 0}
+button.ghost{background:#fff;color:#0C3B22;border:1px solid #0C3B22}
+button:disabled{opacity:.4;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+td,th{text-align:left;padding:.35rem .4rem;border-bottom:1px solid #eee}
+td.r,th.r{text-align:right}
+.neg{color:#A11B1B}
+.note{background:#FFF7E0;border-radius:10px;padding:.6rem .8rem;margin:.6rem 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Life Sim: Your First Year</h1>
+<p>You start with $10,000 in checking and one year to see how far it goes. Make your choices each month, watch the money move, and find out what happens. Prices and events are simplified for practice.</p>
+
+<section id="setup" class="card">
+  <h2>Pick your life</h2>
+  <label for="job">Your job</label><select id="job"></select>
+  <label for="home">Where you live</label><select id="home"></select>
+  <label for="ride">How you get around</label><select id="ride"></select>
+  <label for="groc">What your food looks like</label><select id="groc"></select>
+  <p><button id="start">Start my year</button></p>
+</section>
+
+<section id="game" class="hidden">
+  <div class="grid">
+    <div class="card stat"><b id="sCash"></b><span>Checking</span></div>
+    <div class="card stat"><b id="sSave"></b><span>Savings</span></div>
+    <div class="card stat"><b id="sCard"></b><span>Owed on credit card (24% a year)</span></div>
+    <div class="card stat"><b id="sMonth"></b><span id="sMonthLbl">Month</span></div>
+  </div>
+
+  <div class="card">
+    <h2>This month's bills</h2>
+    <table><tbody id="bills"></tbody></table>
+  </div>
+
+  <div class="card" id="eventBox"><h2>This month</h2><p class="muted">Run the month to see what happens.</p></div>
+
+  <div class="card">
+    <h2>Your plan for next month</h2>
+    <label for="fun">Fun (movies, food out, games)</label>
+    <input id="fun" type="number" min="0" step="10" value="100">
+    <label for="save">Put in savings</label>
+    <input id="save" type="number" min="0" step="10" value="0">
+    <label for="cardPay">Pay toward credit card</label>
+    <input id="cardPay" type="number" min="0" step="10" value="25">
+    <p class="muted">The card needs at least $25 or 3% of the balance, whichever is higher. If you pay less, the bank adds a $35 late fee. Interest keeps growing on whatever you still owe.</p>
+    <p><button id="run">Run this month</button></p>
+  </div>
+
+  <div class="card">
+    <h2>Wants</h2>
+    <p class="muted">Pay cash if you have it. Put it on the card if you don't, and see what that costs later.</p>
+    <div id="wants"></div>
+    <div id="buyMsg" class="note hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>Month by month</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Month</th><th class="r">Money in</th><th class="r">Bills</th><th class="r">Fun</th><th class="r">Checking</th><th class="r">Card owed</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="end" class="card hidden"></section>
+</main>
+
+<script>
+const JOBS = [
+  { n: "Warehouse associate, 30 hours a week", pay: 1650 },
+  { n: "Fast food crew, 20 hours a week", pay: 1150 },
+  { n: "Barber shop helper, 25 hours a week", pay: 1350 }
+];
+const HOMES = [
+  { n: "Live with family (no rent, but you help out at home)", rent: 0, util: 0 },
+  { n: "Share an apartment with a roommate", rent: 550, util: 90 },
+  { n: "Rent your own apartment", rent: 950, util: 130 }
+];
+const RIDES = [
+  { n: "Bus pass", cost: 60, car: false },
+  { n: "Used car (payment, insurance, and gas)", cost: 340, car: true }
+];
+const GROC = [
+  { n: "Basic (cook at home, store brands)", cost: 260 },
+  { n: "Normal (a mix of home cooking and takeout)", cost: 380 },
+  { n: "Convenience (eat out and grab food often)", cost: 520 }
+];
+const WANTS = [
+  { n: "Sneakers", price: 180 },
+  { n: "Game console", price: 500 },
+  { n: "Concert ticket", price: 95 },
+  { n: "Car rims", price: 800 }
+];
+const EVENTS = [
+  { t: "Your phone screen cracked. A repair costs $120.", cost: 120, p: 0.12 },
+  { t: "You needed a dentist visit with no insurance. It cost $180.", cost: 180, p: 0.08 },
+  { t: "A friend's birthday. Everyone chips in $40 for a gift.", cost: 40, p: 0.15 },
+  { t: "Your hours at work were cut this month. You earned 20% less.", cut: 0.2, p: 0.12 },
+  { t: "You got a $200 shift bonus.", bonus: 200, p: 0.08 },
+  { t: "Your car needs brakes. The repair costs $450.", cost: 450, p: 0.12, car: true },
+  { t: "Your car battery died. The new one costs $160.", cost: 160, p: 0.08, car: true }
+];
+const PHONE = 45, CLOTHES = 60, OVERDRAFT_FEE = 35, LATE_FEE = 35;
+const APR = 0.24, SAV_RATE = 0.04, MONTHS = 12, START = 10000;
+
+let S = null;
+let note = "";
+
+const $ = id => document.getElementById(id);
+const money = n => (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US");
+
+function fillSelect(el, list) {
+  el.innerHTML = list.map((x, i) => `<option value="${i}">${x.n}</option>`).join("");
+}
+
+function billItems() {
+  const h = HOMES[S.home], r = RIDES[S.ride], g = GROC[S.groc];
+  return [
+    ["Rent", h.rent],
+    ["Utilities", h.util],
+    ["Phone", PHONE],
+    ["Getting around", r.cost],
+    ["Groceries", g.cost],
+    ["Clothes and hygiene", CLOTHES]
+  ];
+}
+function billTotal() { return billItems().reduce((a, b) => a + b[1], 0); }
+
+function rollEvent() {
+  const r = Math.random();
+  let cum = 0;
+  for (const e of EVENTS) {
+    if (e.car && !RIDES[S.ride].car) continue;
+    cum += e.p;
+    if (r < cum) return e;
+  }
+  return null;
+}
+
+function readPlan() {
+  const v = id => Math.max(0, Math.round(Number($(id).value) || 0));
+  return { fun: v("fun"), save: v("save"), cardPay: v("cardPay") };
+}
+
+function runMonth() {
+  const plan = readPlan();
+  const ev = rollEvent();
+  const incomeBase = JOBS[S.job].pay;
+  const income = incomeBase * (ev && ev.cut ? 1 - ev.cut : 1) + (ev && ev.bonus ? ev.bonus : 0);
+  const evCost = ev && ev.cost ? ev.cost : 0;
+  const fixed = billTotal();
+
+  const cardInt = S.card * APR / 12;
+  S.card += cardInt;
+  S.interestPaid += cardInt;
+  const savInt = S.save * SAV_RATE / 12;
+  S.save += savInt;
+
+  S.cash += income;
+  S.cash -= fixed + evCost + plan.fun;
+
+  let saved = 0;
+  if (plan.save > 0) {
+    saved = Math.min(plan.save, Math.max(0, S.cash));
+    S.cash -= saved;
+    S.save += saved;
+  }
+
+  let paid = 0;
+  if (S.card > 0) {
+    const minDue = Math.min(S.card, Math.max(25, Math.ceil(S.card * 0.03)));
+    paid = Math.min(plan.cardPay, S.card, Math.max(0, S.cash));
+    S.cash -= paid;
+    S.card -= paid;
+    var late = paid < minDue;
+    if (late) { S.card += LATE_FEE; S.fees += LATE_FEE; }
+  }
+
+  let short = 0;
+  if (S.cash < 0) {
+    short = -S.cash;
+    S.card += short + OVERDRAFT_FEE;
+    S.fees += OVERDRAFT_FEE;
+    S.cash = 0;
+  }
+
+  S.log.push({
+    m: S.m, income, fixed, evCost, evText: ev ? ev.t : "", fun: plan.fun,
+    saved, paid, late: !!late, short, cardInt,
+    cash: S.cash, save: S.save, card: S.card
+  });
+  S.m++;
+  note = "";
+}
+
+function buy(i, how) {
+  const w = WANTS[i];
+  if (how === "cash") {
+    if (S.cash < w.price) {
+      note = `Not enough in checking for ${w.n.toLowerCase()}. Put it on the card, or pick something cheaper.`;
+      render();
+      return;
+    }
+    S.cash -= w.price;
+    note = `Paid cash for ${w.n.toLowerCase()}: ${money(w.price)}.`;
+  } else {
+    S.card += w.price;
+    note = `Put ${w.n.toLowerCase()} on the card: ${money(w.price)}. It is now part of what you owe, at 24% a year.`;
+  }
+  S.wantsBought += w.price;
+  render();
+}
+
+function render() {
+  $("setup").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  const ended = S.m > MONTHS;
+  $("sCash").textContent = money(S.cash);
+  $("sSave").textContent = money(S.save);
+  $("sCard").textContent = money(S.card);
+  $("sCard").className = S.card > 0 ? "neg" : "";
+  $("sMonth").textContent = ended ? "Done" : `${S.m} of ${MONTHS}`;
+
+  $("bills").innerHTML = billItems().map(([n, c]) => `<tr><td>${n}</td><td class="r">${money(c)}</td></tr>`).join("")
+    + `<tr><th>Total bills</th><th class="r">${money(billTotal())}</th></tr>`
+    + `<tr><td>Take-home pay</td><td class="r">${money(JOBS[S.job].pay)}</td></tr>`;
+
+  const last = S.log[S.log.length - 1];
+  $("eventBox").innerHTML = `<h2>${last ? "Last month" : "This month"}</h2>` + (last
+    ? `<p>${last.evText ? last.evText : "A quiet month. Nothing unexpected happened."}</p>`
+      + (last.late ? `<p class="neg">You paid less than the minimum on the card. A $35 late fee was added.</p>` : "")
+      + (last.short ? `<p class="neg">You were ${money(last.short)} short. The bank charged a $35 overdraft fee, and the shortfall went on your card.</p>` : "")
+    : `<p class="muted">Run the month to see what happens.</p>`)
+    + (note ? `<p class="note">${note}</p>` : "");
+
+  $("run").disabled = ended;
+  $("wants").innerHTML = WANTS.map((w, i) =>
+    `<div style="margin:.35rem 0"><b>${w.n}</b> ${money(w.price)} `
+    + `<button class="ghost" data-buy="${i}" data-how="cash" ${ended ? "disabled" : ""}>Pay cash</button>`
+    + `<button class="ghost" data-buy="${i}" data-how="card" ${ended ? "disabled" : ""}>Use card</button></div>`).join("");
+
+  $("log").innerHTML = S.log.slice().reverse().map(l =>
+    `<tr><td>${l.m}</td><td class="r">${money(l.income)}</td><td class="r">${money(l.fixed + l.evCost)}</td>`
+    + `<td class="r">${money(l.fun)}</td><td class="r">${money(l.cash)}</td><td class="r ${l.card > 0 ? "neg" : ""}">${money(l.card)}</td></tr>`).join("");
+
+  if (ended) renderEnd();
+}
+
+function renderEnd() {
+  const netWorth = S.cash + S.save - S.card;
+  const funTotal = S.log.reduce((a, l) => a + l.fun, 0);
+  const bills = billTotal();
+  const months = (S.cash + S.save) / bills;
+  const lines = [];
+  if (S.card > 0) lines.push(`You still owed ${money(S.card)} on your card. At 24% a year, that balance keeps costing you every month.`);
+  if (S.interestPaid + S.fees > 0) lines.push(`You paid ${money(S.interestPaid)} in interest and ${money(S.fees)} in fees. That money bought nothing you can keep.`);
+  lines.push(months >= 3
+    ? `You finished with about ${months.toFixed(1)} months of bills saved. That is a real safety net.`
+    : `You finished with about ${months.toFixed(1)} months of bills saved. Three months is the goal, so you have work to do.`);
+  lines.push(`You spent ${money(funTotal)} on fun and ${money(S.wantsBought)} on wants.`);
+  lines.push(netWorth >= START
+    ? `Your net worth ended at ${money(netWorth)}, which is more than the $10,000 you started with.`
+    : `Your net worth ended at ${money(netWorth)}, below the $10,000 you started with.`);
+
+  $("end").classList.remove("hidden");
+  $("end").innerHTML = `<h2>Your year is over</h2>
+    <p class="stat"><b style="font-size:1.6rem">Net worth: ${money(netWorth)}</b></p>
+    <ul>${lines.map(l => `<li style="margin:.4rem 0">${l}</li>`).join("")}</ul>
+    <h3>Try this next time</h3>
+    <ul>
+      <li>Pay yourself first: move savings in before you spend on fun.</li>
+      <li>Pay more than the minimum on the card, or pay it off before buying anything new.</li>
+      <li>Keep three months of bills in savings before you buy big wants.</li>
+    </ul>
+    <p><button onclick="location.reload()">Play again</button></p>`;
+}
+
+$("start").onclick = () => {
+  S = { m: 1, cash: START, save: 0, card: 0, fees: 0, interestPaid: 0, wantsBought: 0,
+        job: Number($("job").value), home: Number($("home").value),
+        ride: Number($("ride").value), groc: Number($("groc").value), log: [] };
+  $("game").classList.remove("hidden");
+  render();
+};
+
+$("run").onclick = () => { runMonth(); render(); };
+
+$("wants").onclick = e => {
+  const b = e.target.closest("button[data-buy]");
+  if (b && !b.disabled) buy(Number(b.dataset.buy), b.dataset.how);
+};
+
+fillSelect($("job"), JOBS);
+fillSelect($("home"), HOMES);
+fillSelect($("ride"), RIDES);
+fillSelect($("groc"), GROC);
+$("groc").value = "0";
+</script>
+</body>
+</html>
