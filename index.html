@@ -43,6 +43,13 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:1re
 .pn-drop button{display:block;width:100%;text-align:left;background:none;border:0;color:#fff;font-weight:700;font-size:1.1rem;padding:.8rem 1rem;border-radius:12px;cursor:pointer}
 .pn-drop button:hover{background:rgba(255,255,255,.1)}
 .pn-drop.open{display:block}
+#intro{position:fixed;inset:0;z-index:9999;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2rem;padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:opacity .7s ease}
+#intro.out{opacity:0;pointer-events:none}
+#intro img{width:clamp(96px,18vw,150px);height:auto;filter:brightness(0) invert(1);opacity:0;animation:introIn 1s ease .15s forwards}
+#intro blockquote{margin:0;max-width:34ch;font-family:Georgia,"Times New Roman",serif;font-size:clamp(1.05rem,2.6vw,1.45rem);line-height:1.55;opacity:0;animation:introIn 1s ease .9s forwards}
+#intro cite{display:block;margin-top:1rem;font-family:inherit;font-style:normal;font-size:.8rem;letter-spacing:.28em;text-transform:uppercase;color:#bdbdbd}
+@keyframes introIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#intro img,#intro blockquote{animation:none;opacity:1}#intro{transition:none}}
 .brandband{text-align:center;padding:3.2rem 1rem 2.4rem;margin:1rem 0}
 .brandrow{display:flex;align-items:center;justify-content:center;gap:clamp(1.2rem,5vw,3.4rem)}
 .brandrow .pl{height:clamp(34px,6vw,54px);width:auto;opacity:.85}
@@ -514,6 +521,23 @@ tr.click:hover td{background:color-mix(in srgb,var(--signal) 10%,transparent)}
 </style>
 </head>
 <body>
+<div id="intro" role="dialog" aria-label="Welcome to The Ivy Foundation" tabindex="-1">
+ <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACFCAYAAADcrvOoAAABwElEQVR42u3aMU4bURRA0TvBRGIBFFkGSpkVZAHZQyp61sFC6LIDOlCqRKJIGaVASZEiAVGYxguAGX/Zss5ppvGTvp/un8aeep3P1afqoe16W11UNzNmT6rr6qzt+1W93zzneFfdbp7b9rX6UP2fMfux+tIYl9X5Sz/8JtghASJABAgCRIAgQAQIAkSAIEAECAJEgCBABAgCRIAgQAQIAkSAIEAECAJEgCBABAgCRIAgQAQIAkSACBAEiABBgAgQBIgAQYAIEASIAEGACBAEiABBgAgQBIgAQYAIEASIAEGACBAEiABBgAgQBIgAQYAIEAGCABEgCBABggARIAgQAYIAESAIEAGCABEgCBABggARIAgQAYIAESAIEAGCABEgCBABggARIAK0AgSIAEGACBAEiABBgBy81YxgVzPmXnKOacH88aD9HC881zT4bPv44jkaGeDv6kf1OGCZ/2bOrqu7QUu9r54WzD9V36rTAWe723z3Of5W3wcF+PO1N3TOrR5hvWB2Gnij1wvn9/Vs057uCwAAAAAA4EBM1ZU1sMsA/XbHzvg/IAJEgCBABAgCRIAgQAQIAuRwrao/1sCuPAM2jCCnniqQxgAAAABJRU5ErkJggg==" alt="The Ivy Foundation">
+ <blockquote>&ldquo;But I see four men loose and walking in the midst of the fire, and they are unharmed. And the form of the fourth is like the Son of God!&rdquo;<cite>Daniel 3:25</cite></blockquote>
+</div>
+<script>
+(function(){
+  var el=document.getElementById("intro");if(!el)return;
+  var seen=false;try{seen=sessionStorage.getItem("ivy_intro")==="1"}catch(e){}
+  if(seen){el.parentNode.removeChild(el);return}
+  try{sessionStorage.setItem("ivy_intro","1")}catch(e){}
+  var done=false;
+  function close(){if(done)return;done=true;el.classList.add("out");setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},800)}
+  el.addEventListener("click",close);
+  document.addEventListener("keydown",function k(){close();document.removeEventListener("keydown",k)});
+  setTimeout(close,4200);
+})();
+</script>
 <header class="ejbar"><div class="in">
   <button class="ej-logo" id="home2" aria-label="The Ivy Foundation, home"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACFCAYAAADcrvOoAAABwElEQVR42u3aMU4bURRA0TvBRGIBFFkGSpkVZAHZQyp61sFC6LIDOlCqRKJIGaVASZEiAVGYxguAGX/Zss5ppvGTvp/un8aeep3P1afqoe16W11UNzNmT6rr6qzt+1W93zzneFfdbp7b9rX6UP2fMfux+tIYl9X5Sz/8JtghASJABAgCRIAgQAQIAkSAIEAECAJEgCBABAgCRIAgQAQIAkSAIEAECAJEgCBABAgCRIAgQAQIAkSACBAEiABBgAgQBIgAQYAIEASIAEGACBAEiABBgAgQBIgAQYAIEASIAEGACBAEiABBgAgQBIgAQYAIEAGCABEgCBABggARIAgQAYIAESAIEAGCABEgCBABggARIAgQAYIAESAIEAGCABEgCBABggARIAK0AgSIAEGACBAEiABBgBy81YxgVzPmXnKOacH88aD9HC881zT4bPv44jkaGeDv6kf1OGCZ/2bOrqu7QUu9r54WzD9V36rTAWe723z3Of5W3wcF+PO1N3TOrR5hvWB2Gnij1wvn9/Vs057uCwAAAAAA4EBM1ZU1sMsA/XbHzvg/IAJEgCBABAgCRIAgQAQIAuRwrao/1sCuPAM2jCCnniqQxgAAAABJRU5ErkJggg==" alt=""><span><b>The Ivy Foundation</b><small>God &middot; Family &middot; Community &middot; Self</small></span></button>
   <nav class="ej-links" aria-label="Main"><button class="l" data-nav="about">About</button><button class="l" data-nav="youthNew">Students</button><button class="l" data-nav="staffLogin">Staff</button><button class="l" data-nav="partners">Partners</button><button class="l" data-nav="news">News</button><button class="l" data-nav="stars">STARS</button><span id="who2"></span><button class="l ej-cta" data-nav="involved">Get Involved</button><button class="ej-menu" id="ej-menu" aria-controls="pn-drop" aria-expanded="false">Menu</button></nav>
@@ -960,41 +984,41 @@ function bindPad(onFull){
 function youthPin(){const v=y(view.id);return `<h2>Hi, ${esc(v.name)}.</h2><p>Enter your 4 digit PIN.</p>${pinpad()}${view.err?`<p class="err">${esc(view.err)}</p>`:""}<button class="linkbtn" id="back">Not you? Go back</button><p class="hint">Forgot your PIN? Ask staff to reset it.</p>`}
 bind.youthPin=()=>{bindPad(()=>{const v=y(view.id);if(v.pin===view.pin){session={role:"youth",id:v.id};go("youthHome")}else{view.pin="";view.err="That PIN doesn't match. Try again.";render()}});$("#back").onclick=()=>go("youthSignin",{err:""})};
 
-function youthSignin(){return `<h2>Welcome back.</h2><p>Type your name the way you signed up, then your PIN.</p>
- <label for="si-n">First name and last initial</label><input id="si-n" autocomplete="off" maxlength="30">
+function youthSignin(){return `<h2>Welcome back.</h2><p>Type your first and last name the way you signed up, then your PIN.</p>
+ <div class="row" style="gap:1rem;align-items:flex-end"><div class="grow"><label for="si-f">First name</label><input id="si-f" autocomplete="off" maxlength="30"></div><div class="grow"><label for="si-l">Last name</label><input id="si-l" autocomplete="off" maxlength="40"></div></div>
  <label for="si-p">4 digit PIN</label><input id="si-p" inputmode="numeric" maxlength="4" type="password" autocomplete="off" style="max-width:220px">
  ${view.err?`<p class="err">${esc(view.err)}</p>`:""}
  <div class="row" style="margin-top:1.2rem"><button class="btn" id="si-go">Sign in</button><button class="btn ghost" id="back">Back</button></div>
  <p class="hint" style="margin-top:1rem">Forgot your PIN? Ask staff to reset it. New here? <button class="linkbtn" id="new">Get started</button></p>`}
 bind.youthSignin=()=>{
   $("#back").onclick=()=>go("studentChoose");$("#new").onclick=()=>go("studentChoose");
-  const tryIt=()=>{const n=$("#si-n").value.trim().toLowerCase().replace(/\s+/g," "),pin=$("#si-p").value;
+  const tryIt=()=>{const n=($("#si-f").value+" "+$("#si-l").value).trim().toLowerCase().replace(/\s+/g," "),pin=$("#si-p").value;
     const v=S.youth.find(x=>x.name.toLowerCase().replace(/\s+/g," ")===n&&x.pin===pin);
     if(v){session={role:"youth",id:v.id};go("youthHome")}else{view.err="That name and PIN don't match. Check the spelling or ask staff.";render()}};
   $("#si-go").onclick=tryIt;$("#si-p").onkeydown=e=>{if(e.key==="Enter")tryIt()};
 };
 function youthNew(){return `<div class="player"><div class="steps" aria-hidden="true"><i class="now"></i>${INTAKE.map(()=>"<i></i>").join("")}</div>
  <span class="muted">Getting started, step 1 of ${INTAKE.length+1}</span>
- <h2 style="margin-top:.8rem">Let's get you started.</h2><p>Use your first name and last initial. Pick a 4 digit PIN you'll remember and don't share it. Next we'll ask a few questions so we can match you with the right help and jobs.</p>
- <label for="nm">First name and last initial</label><input id="nm" autocomplete="off" maxlength="30" placeholder="Example: Marcus T.">
+ <h2 style="margin-top:.8rem">Let's get you started.</h2><p>Use your real first and last name so your mentor can find you. Pick a 4 digit PIN you'll remember and don't share it. Next we'll ask a few questions so we can match you with the right help and jobs.</p>
+ <div class="row" style="gap:1rem;align-items:flex-end"><div class="grow"><label for="fn">First name</label><input id="fn" autocomplete="off" maxlength="30" placeholder="Example: Marcus"></div><div class="grow"><label for="ln">Last name</label><input id="ln" autocomplete="off" maxlength="40" placeholder="Example: Thompson"></div></div>
  <label for="site">Where are you?</label><select id="site"><option value="jdc" ${view.site==="jdc"?"selected":""}>${SITES.jdc.name}</option><option value="stars" ${view.site==="stars"?"selected":""}>${SITES.stars.name}</option></select>
  <label for="p1">4 digit PIN</label><input id="p1" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
  <label for="p2">Type the PIN again</label><input id="p2" inputmode="numeric" maxlength="4" type="password" autocomplete="off">
- ${view.err?`<p class="err">${esc(view.err)}</p>`:""}${view.err&&view.dupName?`<button class="btn" id="todup" style="margin-top:.4rem">Sign in as ${esc(view.dupName)}</button><p class="hint">Not you? Add a middle initial to your name and tap Next.</p>`:""}
+ ${view.err?`<p class="err">${esc(view.err)}</p>`:""}${view.err&&view.dupName?`<button class="btn" id="todup" style="margin-top:.4rem">Sign in as ${esc(view.dupName)}</button><p class="hint">Not you? Add your middle initial after your first name and tap Next.</p>`:""}
  <div class="row" style="margin-top:1.2rem"><button class="btn sig" id="mk">Next</button><button class="btn ghost" id="back">Back</button></div></div>
  <p style="margin-top:1.2rem">Already signed up? <button class="linkbtn" id="signin">Sign in</button></p>`}
 bind.youthNew=()=>{
   $("#back").onclick=()=>go("studentChoose");$("#signin").onclick=()=>go("youthSignin",{err:""});
-  const td=$("#todup");if(td)td.onclick=()=>{const n=view.dupName;go("youthSignin",{err:""});const f=$("#si-n");if(f){f.value=n;$("#si-p").focus()}};
+  const td=$("#todup");if(td)td.onclick=()=>{const n=view.dupName;go("youthSignin",{err:""});const f=$("#si-f"),l=$("#si-l");if(f&&l){const i=n.lastIndexOf(" ");f.value=i>0?n.slice(0,i):n;l.value=i>0?n.slice(i+1):"";$("#si-p").focus()}};
   $("#mk").onclick=()=>{
-    const nm=$("#nm").value.trim(),p1=$("#p1").value,p2=$("#p2").value;
+    const fn=$("#fn").value.trim().replace(/\s+/g," "),ln=$("#ln").value.trim().replace(/\s+/g," "),nm=(fn+" "+ln).trim(),p1=$("#p1").value,p2=$("#p2").value;
     let err="";
-    if(nm.length<2)err="Type your first name and last initial.";
+    if(fn.length<1||ln.length<2)err="Type your first name and your full last name.";
     else if(!/^\d{4}$/.test(p1))err="Your PIN needs exactly 4 numbers.";
     else if(p1!==p2)err="The two PINs don't match.";
     else if(S.youth.some(v=>v.name.toLowerCase()===nm.toLowerCase())){view.dupName=nm;err="You're already signed up on this tablet. Sign in with your PIN instead.";}
     if(err){view.err=err;render();return}
-    const v={id:uid(),name:nm,pin:p1,site:$("#site").value,created:today(),progress:{},plan:{}};
+    const v={id:uid(),name:nm,first:fn,last:ln,pin:p1,site:$("#site").value,created:today(),progress:{},plan:{}};
     S.youth.push(v);save();session={role:"youth",id:v.id};go("youthHome");
   };
 };
