@@ -157,6 +157,12 @@ tr.detail td{background:#FAF9F5;padding:16px}
       </div>
     </div>
 
+    <div class="card hidden" id="grantCard">
+      <h2>Grant calendar</h2>
+      <p style="color:var(--muted);margin-top:-6px">Open grants and due dates, updated every Monday morning. Opens in Claude; only people you share it with can see it.</p>
+      <p><a href="https://claude.ai/artifact/6rku9r8KmPAx3M4bLpP1Kf" target="_blank" rel="noopener"><button type="button">Open grant calendar</button></a></p>
+    </div>
+
     <div class="card hidden" id="staffCard">
       <h2>Staff and mentors</h2>
       <p style="color:var(--muted);margin-top:-6px">Mentors are staff accounts. Each person signs in with their own email and password. Share the temporary password in person or in a private message, not in a group chat.</p>
@@ -230,6 +236,7 @@ function setSignedIn(staff) {
   $("listCard").classList.toggle("hidden", partner);
   $("partnerCard").classList.toggle("hidden", !partner);
   $("staffCard").classList.toggle("hidden", !admin);
+  $("grantCard").classList.toggle("hidden", !admin);
   $("assignCard").classList.toggle("hidden", !admin);
   if (partner) loadPartner();
   else if (admin) refreshAdmin();
