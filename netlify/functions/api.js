@@ -12,7 +12,7 @@ function ensureSchema() {
     const ddl = fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8');
     schemaReady = (async () => {
       const statements = ddl.replace(/--.*$/gm, '').split(';').map(s => s.trim()).filter(Boolean);
-      for (const st of statements) await sql.query(st);
+      for (const st of statements) await sql(st);
     })().catch(err => { schemaReady = null; throw err; });
   }
   return schemaReady;
