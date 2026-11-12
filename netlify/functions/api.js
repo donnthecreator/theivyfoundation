@@ -258,6 +258,11 @@ exports.handler = async (event) => {
 
     if (route === '/me' && method === 'GET') return json(200, { staff });
 
+    if (route === '/grants' && method === 'GET') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can see the grant calendar' });
+      return json(200, require('../grants.json'));
+    }
+
     if (route === '/staff' && method === 'GET') {
       if (staff.role !== 'admin') return json(403, { error: 'Only an admin can see the staff list' });
       const rows = await sql`SELECT id, name, email, role, created_at FROM staff ORDER BY role, name`;

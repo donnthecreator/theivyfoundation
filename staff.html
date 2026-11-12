@@ -48,6 +48,43 @@ tr.detail td{background:#FAF9F5;padding:16px}
 .dgrid ul{margin:0;padding-left:1.1rem;font-size:.92rem}
 .warn{background:#FFF4D6;border:1px solid #E8C96A;color:#6B4E00;border-radius:7px;padding:8px 10px;font-size:.88rem;margin-bottom:10px}
 @media (max-width:640px){th:nth-child(3),td:nth-child(3){display:none}}
+.gtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.gtiles div{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.gtiles b{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.gtiles span{color:var(--muted);font-size:.85rem}
+.gctl{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:14px}
+.gctl label{margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)}
+.gctl select{width:auto;padding:6px 8px}
+.gcols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.gcols{grid-template-columns:1fr}}
+.gh{font-size:.95rem;margin:0 0 8px}
+.glist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.gitem{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px}
+.gitem.flash{border-color:var(--green);box-shadow:0 0 0 2px #E6F4EA}
+.gwhen{text-align:center;border-right:1px solid var(--line);padding-right:10px}
+.gwhen .m{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.gwhen .d{font-size:1.35rem;font-weight:700;line-height:1.1}
+.gwhen .l{font-size:.78rem;font-weight:700;margin-top:4px}
+.gwhen .l.soon{color:#9A3412}
+.gitem h4{margin:0;font-size:1rem}
+.gitem p{margin:4px 0 0;font-size:.92rem}
+.gmeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.gpill{font-size:.75rem;font-weight:700;border-radius:999px;padding:1px 8px;background:#E6F4EA;color:var(--green)}
+.gpill.proj{background:#F5EDC8;color:#5B4B00}
+.gpill.need{background:#FCE9DD;color:#9A3412}
+.gpill.plain{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.gcal{border:1px solid var(--line);border-radius:8px;padding:10px}
+.gcalhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.gcalhead button{padding:4px 10px}
+.ggrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.ggrid .dow{font-size:.72rem;color:var(--muted);text-align:center}
+.gcell{min-height:54px;border:1px solid var(--line);border-radius:5px;padding:2px;display:flex;flex-direction:column;gap:2px;font-size:.72rem}
+.gcell.out{border-color:transparent}
+.gcell.today{border:2px solid var(--green)}
+.gcell .n{color:var(--muted)}
+.gchip{font:inherit;font-size:.68rem;font-weight:700;line-height:1.2;text-align:left;padding:1px 3px;border:0;border-radius:3px;background:#E6F4EA;color:var(--green);overflow-wrap:anywhere}
+.gchip:hover{background:#d3ecda}
+.gchip.proj{background:#F5EDC8;color:#5B4B00}
 </style>
 </head>
 <body>
@@ -159,8 +196,31 @@ tr.detail td{background:#FAF9F5;padding:16px}
 
     <div class="card hidden" id="grantCard">
       <h2>Grant calendar</h2>
-      <p style="color:var(--muted);margin-top:-6px">Open grants and due dates, updated every Monday morning. Opens in Claude; only people you share it with can see it.</p>
-      <p><a href="https://claude.ai/artifact/6rku9r8KmPAx3M4bLpP1Kf" target="_blank" rel="noopener"><button type="button">Open grant calendar</button></a></p>
+      <p style="color:var(--muted);margin-top:-6px" id="gStamp">Updated every Monday morning.</p>
+      <div class="gtiles">
+        <div><b id="gNext">-</b><span id="gNextLbl">days to the next date</span></div>
+        <div><b id="g30">-</b><span>due in 30 days</span></div>
+        <div><b id="g90">-</b><span>due in 90 days</span></div>
+        <div><b id="gAll">-</b><span>grants tracked</span></div>
+      </div>
+      <div class="gctl">
+        <label>Show <select id="gStatus"><option value="all">all dates</option><option value="listed">published dates only</option><option value="projected">projected dates only</option></select></label>
+        <label class="check" style="margin:0"><input type="checkbox" id="g501"><span>Hide grants that require 501(c)(3) status</span></label>
+      </div>
+      <div class="gcols">
+        <div><h3 class="gh">Upcoming deadlines</h3><ul class="glist" id="gList"></ul></div>
+        <div>
+          <h3 class="gh">Month view</h3>
+          <div class="gcal">
+            <div class="gcalhead"><button type="button" class="ghost" id="gPrev" aria-label="Previous month">&larr;</button><strong id="gMonth"></strong><button type="button" class="ghost" id="gNextM" aria-label="Next month">&rarr;</button></div>
+            <div class="ggrid" id="gGrid"></div>
+            <p class="sub" style="margin-top:8px"><span class="gpill">Published</span> from a current listing &nbsp; <span class="gpill proj">Projected</span> from the last cycle</p>
+          </div>
+          <h3 class="gh" style="margin-top:18px">Watch list, no date yet</h3>
+          <ul class="glist" id="gWatch"></ul>
+        </div>
+      </div>
+      <p class="sub" style="margin-top:12px">Check every date on the funder's own page before planning around it. Projected dates assume the funder repeats last cycle's timing.</p>
     </div>
 
     <div class="card hidden" id="staffCard">
@@ -443,7 +503,89 @@ async function loadStaff() {
   } catch (err) { say(err.message); }
 }
 
+let G = null, gView = null;
+const G_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const G_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const G_NEED = { yes: "Requires 501(c)(3)", partner: "Apply through a partner", check: "Check eligibility" };
+function gParse(s) { const p = String(s).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function gToday() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function gVisible(g) {
+  if ($("gStatus").value !== "all" && g.status !== $("gStatus").value) return false;
+  if ($("g501").checked && g.needs501c3 === "yes") return false;
+  return true;
+}
+function gSafeUrl(u) { return /^https?:\/\//i.test(String(u || "")) ? u : "#"; }
+
+async function loadGrants() {
+  try {
+    const d = await api("GET", "/grants");
+    const t = gToday();
+    G = {
+      lastUpdated: d.lastUpdated,
+      watch: d.watch || [],
+      grants: (d.grants || []).map(g => Object.assign({}, g, { d: gParse(g.date) }))
+        .map(g => Object.assign(g, { left: Math.round((g.d - t) / 86400000) }))
+        .sort((a, b) => a.d - b.d)
+    };
+    const up = G.grants.filter(g => g.left >= 0);
+    gView = up.length ? new Date(up[0].d.getFullYear(), up[0].d.getMonth(), 1) : new Date(t.getFullYear(), t.getMonth(), 1);
+    if (G.lastUpdated) { const u = gParse(G.lastUpdated); $("gStamp").textContent = `Last updated ${G_SHORT[u.getMonth()]} ${u.getDate()}, ${u.getFullYear()}. Refreshed every Monday morning.`; }
+    $("gNext").textContent = up.length ? up[0].left : "0";
+    $("gNextLbl").textContent = up.length ? `days to the next date: ${up[0].funder}` : "no upcoming dates";
+    $("g30").textContent = up.filter(g => g.left <= 30).length;
+    $("g90").textContent = up.filter(g => g.left <= 90).length;
+    $("gAll").textContent = G.grants.length + G.watch.length;
+    $("gWatch").innerHTML = G.watch.length ? G.watch.map(w =>
+      `<li class="gitem" style="display:block"><b>${esc(w.funder)}: ${esc(w.program)}</b> ${esc(w.note)} <a href="${esc(gSafeUrl(w.source))}" target="_blank" rel="noopener">Source</a></li>`).join("")
+      : '<li class="sub">Nothing on the watch list.</li>';
+    gRender();
+  } catch (err) { $("gStamp").textContent = "The grant calendar could not load: " + err.message; }
+}
+
+function gRender() {
+  if (!G) return;
+  const rows = G.grants.filter(g => g.left >= 0 && gVisible(g));
+  $("gList").innerHTML = rows.length ? rows.map(g => `
+    <li class="gitem" id="g-${esc(g.id)}">
+      <div class="gwhen"><div class="m">${G_SHORT[g.d.getMonth()]} ${g.d.getFullYear()}</div><div class="d">${g.d.getDate()}</div>
+        <div class="l ${g.left <= 30 ? "soon" : ""}">${g.left === 0 ? "Today" : g.left + (g.left === 1 ? " day" : " days")}</div></div>
+      <div><h4>${esc(g.program)}</h4><p class="sub">${esc(g.funder)} · ${esc(g.amount)}</p><p>${esc(g.note)}</p>
+        <div class="gmeta"><span class="gpill ${g.status === "projected" ? "proj" : ""}">${esc(g.dateType)}, ${g.status === "projected" ? "projected" : "published"}</span>
+        <span class="gpill ${g.needs501c3 === "yes" ? "need" : "plain"}">${G_NEED[g.needs501c3] || "Check eligibility"}</span>
+        ${(g.fit || []).map(f => `<span class="gpill plain">${esc(f)}</span>`).join("")}</div>
+        <p><a href="${esc(gSafeUrl(g.source))}" target="_blank" rel="noopener">Source</a></p></div>
+    </li>`).join("") : '<li class="sub">No grants match these filters.</li>';
+
+  const t = gToday();
+  $("gMonth").textContent = `${G_MONTHS[gView.getMonth()]} ${gView.getFullYear()}`;
+  let html = ["S","M","T","W","T","F","S"].map(d => `<div class="dow">${d}</div>`).join("");
+  for (let i = 0; i < gView.getDay(); i++) html += '<div class="gcell out"></div>';
+  const count = new Date(gView.getFullYear(), gView.getMonth() + 1, 0).getDate();
+  for (let day = 1; day <= count; day++) {
+    const date = new Date(gView.getFullYear(), gView.getMonth(), day);
+    const chips = G.grants.filter(g => gVisible(g) && g.d.getTime() === date.getTime()).map(g =>
+      `<button type="button" class="gchip ${g.status === "projected" ? "proj" : ""}" data-gid="${esc(g.id)}" title="${esc(g.program)} (${esc(g.dateType)})">${esc(g.funder)}</button>`).join("");
+    html += `<div class="gcell ${date.getTime() === t.getTime() ? "today" : ""}"><span class="n">${day}</span>${chips}</div>`;
+  }
+  $("gGrid").innerHTML = html;
+}
+
+$("gStatus").onchange = gRender;
+$("g501").onchange = gRender;
+$("gPrev").onclick = () => { if (!gView) return; gView = new Date(gView.getFullYear(), gView.getMonth() - 1, 1); gRender(); };
+$("gNextM").onclick = () => { if (!gView) return; gView = new Date(gView.getFullYear(), gView.getMonth() + 1, 1); gRender(); };
+$("gGrid").onclick = (e) => {
+  const b = e.target.closest("[data-gid]");
+  if (!b) return;
+  const el = document.getElementById("g-" + b.dataset.gid);
+  if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1600);
+};
+
 async function refreshAdmin() {
+  loadGrants();
   await loadYouth();
   await loadStaff();
   await loadAssignments();

@@ -3,6 +3,18 @@
   functions = "netlify/functions"
 
 [[redirects]]
+  from = "/netlify/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/db/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
