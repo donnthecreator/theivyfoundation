@@ -57,3 +57,15 @@ ALTER TABLE youth ADD COLUMN IF NOT EXISTS locked_until timestamptz;
 ALTER TABLE youth ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 CREATE INDEX IF NOT EXISTS youth_name_idx ON youth (lower(first_name), lower(last_name));
 CREATE UNIQUE INDEX IF NOT EXISTS youth_waiver_token_idx ON youth (waiver_token_hash) WHERE waiver_token_hash IS NOT NULL;
+
+-- Mentor assignments and partner (employer) access, with guardian consent (added 2026-11-11)
+ALTER TABLE staff DROP CONSTRAINT IF EXISTS staff_role_check;
+ALTER TABLE staff ADD CONSTRAINT staff_role_check CHECK (role IN ('admin','staff','partner'));
+CREATE TABLE IF NOT EXISTS staff_youth (
+  staff_id uuid NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  youth_id uuid NOT NULL REFERENCES youth(id) ON DELETE CASCADE,
+  guardian_consent_at timestamptz,
+  guardian_consent_by text,
+  assigned_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (staff_id, youth_id)
+);

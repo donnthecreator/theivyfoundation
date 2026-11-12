@@ -90,6 +90,24 @@ function newWaiverToken() {
   const token = crypto.randomBytes(24).toString('base64url');
   return { token, hash: sha256(token) };
 }
+function partnerView(y) {
+  const jobs = ((y.app_state && y.app_state.jobInterests) || []).map(i => ({
+    title: i.title || 'A partner job', business: i.business || null, status: i.status || ''
+  }));
+  return { id: y.id, firstName: y.first_name, lastName: y.last_name, site: y.site, jobs };
+}
+async function youthAccess(staff, youthId) {
+  if (staff.role === 'admin') return true;
+  if (staff.role === 'staff') {
+    const r = await sql`SELECT 1 FROM staff_youth WHERE staff_id = ${staff.id} AND youth_id = ${youthId}`;
+    return r.length > 0;
+  }
+  if (staff.role === 'partner') {
+    const r = await sql`SELECT 1 FROM staff_youth WHERE staff_id = ${staff.id} AND youth_id = ${youthId} AND guardian_consent_at IS NOT NULL`;
+    return r.length > 0;
+  }
+  return false;
+}
 function youthPublic(y) {
   return { id: y.id, firstName: y.first_name, lastName: y.last_name, site: y.site, status: y.status };
 }
@@ -234,11 +252,53 @@ exports.handler = async (event) => {
       return json(200, { staff: rows });
     }
 
+    if (route === '/assignments' && method === 'GET') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can manage assignments' });
+      const rows = await sql`SELECT a.staff_id, a.youth_id, a.guardian_consent_at, a.guardian_consent_by,
+          s.name AS staff_name, s.role, y.first_name, y.last_name
+        FROM staff_youth a JOIN staff s ON s.id = a.staff_id JOIN youth y ON y.id = a.youth_id
+        ORDER BY y.last_name, y.first_name, s.name`;
+      return json(200, { assignments: rows });
+    }
+
+    if (route === '/assignments' && method === 'POST') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can manage assignments' });
+      const uuid = /^[0-9a-f-]{36}$/;
+      if (!uuid.test(String(body.staffId || '')) || !uuid.test(String(body.youthId || ''))) return json(400, { error: 'Choose a mentor or partner and a youth.' });
+      const target = await sql`SELECT id, role FROM staff WHERE id = ${body.staffId}`;
+      if (!target.length || target[0].role === 'admin') return json(400, { error: 'Choose a mentor or partner.' });
+      const y = await sql`SELECT id FROM youth WHERE id = ${body.youthId}`;
+      if (!y.length) return json(400, { error: 'Choose a youth.' });
+      let consentAt = null, consentBy = null;
+      if (target[0].role === 'partner') {
+        const gName = cleanName(body.guardianName);
+        if (body.guardianConsent !== true || !gName) {
+          return json(400, { error: "A partner sees a youth's job track only after the guardian signs consent. Check the box and enter the guardian's name." });
+        }
+        consentAt = new Date().toISOString();
+        consentBy = gName;
+      }
+      await sql`INSERT INTO staff_youth (staff_id, youth_id, guardian_consent_at, guardian_consent_by)
+        VALUES (${target[0].id}, ${y[0].id}, ${consentAt}, ${consentBy})
+        ON CONFLICT (staff_id, youth_id) DO UPDATE SET guardian_consent_at = EXCLUDED.guardian_consent_at, guardian_consent_by = EXCLUDED.guardian_consent_by`;
+      await audit(staff.id, 'assign_youth', `${target[0].id}:${y[0].id}`);
+      return json(201, { ok: true });
+    }
+
+    if (route === '/assignments' && method === 'DELETE') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can manage assignments' });
+      const uuid = /^[0-9a-f-]{36}$/;
+      if (!uuid.test(String(body.staffId || '')) || !uuid.test(String(body.youthId || ''))) return json(400, { error: 'Invalid assignment.' });
+      await sql`DELETE FROM staff_youth WHERE staff_id = ${body.staffId} AND youth_id = ${body.youthId}`;
+      await audit(staff.id, 'unassign_youth', `${body.staffId}:${body.youthId}`);
+      return json(200, { ok: true });
+    }
+
     if (route === '/staff' && method === 'POST') {
       if (staff.role !== 'admin') return json(403, { error: 'Only an admin can add staff' });
       const name = cleanName(body.name);
       const email = String(body.email || '').trim().toLowerCase();
-      const role = body.role === 'admin' ? 'admin' : 'staff';
+      const role = ['admin', 'staff', 'partner'].includes(body.role) ? body.role : 'staff';
       if (!name || name.length < 2) return json(400, { error: "Type the person's full name." });
       if (!validEmail(email)) return json(400, { error: 'Type a valid email address.' });
       if (String(body.password || '').length < 12) return json(400, { error: 'The temporary password needs at least 12 characters.' });
@@ -253,7 +313,25 @@ exports.handler = async (event) => {
       }
     }
 
-    if (route === '/youth' && method === 'GET') {
+    if (route === '/youth' && method === 'GET' && staff.role === 'partner') {
+      const rows = await sql`SELECT y.id, y.first_name, y.last_name, y.site, y.app_state
+        FROM youth y JOIN staff_youth a ON a.youth_id = y.id
+        WHERE a.staff_id = ${staff.id} AND a.guardian_consent_at IS NOT NULL
+        ORDER BY y.last_name, y.first_name`;
+      return json(200, { youth: rows.map(partnerView) });
+    }
+
+    if (route === '/youth' && method === 'GET' && staff.role === 'staff') {
+      const rows = await sql`
+        SELECT y.id, y.first_name, y.last_name, y.site, y.status, y.consent_on_file, y.consent_date, y.guardian_email, y.created_at,
+          (SELECT count(*)::int FROM lesson_progress p WHERE p.youth_id = y.id) AS lessons_done,
+          (SELECT max(v.visited_at) FROM mentor_visits v WHERE v.youth_id = y.id) AS last_visit
+        FROM youth y JOIN staff_youth a ON a.youth_id = y.id AND a.staff_id = ${staff.id}
+        ORDER BY y.last_name, y.first_name`;
+      return json(200, { youth: rows });
+    }
+
+    if (route === '/youth' && method === 'GET' && staff.role === 'admin') {
       const rows = await sql`
         SELECT y.id, y.first_name, y.last_name, y.site, y.status, y.consent_on_file, y.consent_date, y.guardian_email, y.created_at,
           (SELECT count(*)::int FROM lesson_progress p WHERE p.youth_id = y.id) AS lessons_done,
@@ -263,6 +341,7 @@ exports.handler = async (event) => {
     }
 
     if (route === '/youth' && method === 'POST') {
+      if (staff.role === 'partner') return json(403, { error: 'Partners have read-only access' });
       if (!body.firstName || !body.lastName || !['jdc', 'stars'].includes(body.site)) return json(400, { error: 'First name, last name, and site (jdc or stars) are required' });
       if (!body.consentOnFile || !body.guardianName || !body.guardianRelation) return json(400, { error: 'Guardian permission must be on file before an account is created' });
       if (!/^\d{4}$/.test(String(body.pin || ''))) return json(400, { error: 'PIN must be 4 digits' });
@@ -272,6 +351,9 @@ exports.handler = async (event) => {
                 ${body.guardianName}, ${body.guardianRelation}, ${body.guardianPhone || null}, ${body.guardianEmail || null}, 'active', 'paper',
                 ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify(body.intake || {})}::jsonb)
         RETURNING id, first_name, last_name, site, status, consent_on_file, consent_date`;
+      if (staff.role === 'staff') {
+        await sql`INSERT INTO staff_youth (staff_id, youth_id) VALUES (${staff.id}, ${rows[0].id}) ON CONFLICT DO NOTHING`;
+      }
       await audit(staff.id, 'create_youth', rows[0].id);
       return json(201, { youth: rows[0] });
     }
@@ -280,6 +362,15 @@ exports.handler = async (event) => {
     if (m) {
       const id = m[1];
       const action = m[2] || '';
+      if (!(await youthAccess(staff, id))) return json(404, { error: 'Not found' });
+      if (staff.role === 'partner') {
+        if (action === '' && method === 'GET') {
+          const rows = await sql`SELECT id, first_name, last_name, site, app_state FROM youth WHERE id = ${id}`;
+          await audit(staff.id, 'view_job_track', id);
+          return json(200, { youth: partnerView(rows[0]) });
+        }
+        return json(403, { error: 'Partners have read-only access' });
+      }
       if (action === '' && method === 'GET') {
         const rows = await sql`SELECT id, first_name, last_name, site, status, consent_on_file, consent_date, guardian_name, guardian_relation,
           guardian_phone, guardian_email, waiver_signed_at, waiver_signer, waiver_relation, waiver_method, app_state, created_at, updated_at FROM youth WHERE id = ${id}`;

@@ -82,7 +82,7 @@ tr.detail td{background:#FAF9F5;padding:16px}
   </section>
 
   <section id="app" class="hidden">
-    <div class="card">
+    <div class="card" id="youthCard">
       <h2>Add a youth</h2>
       <p class="muted" style="color:var(--muted);margin-top:-6px">Do not create an account until the signed guardian permission form is on file.</p>
       <form id="youthForm">
@@ -103,13 +103,46 @@ tr.detail td{background:#FAF9F5;padding:16px}
       </form>
     </div>
 
-    <div class="card">
+    <div class="card" id="listCard">
       <h2>Youth</h2>
       <p id="pendingNote" class="warn hidden"></p>
       <div class="wrapx">
         <table>
           <thead><tr><th>Name</th><th>Site</th><th>Lessons</th><th>Last visit</th><th>Actions</th></tr></thead>
           <tbody id="rows"><tr><td colspan="5" style="color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card hidden" id="partnerCard">
+      <h2>Job track progress</h2>
+      <p style="color:var(--muted);margin-top:-6px">You see only the youth whose guardian has signed consent for you. This shows job interests and their status, nothing else.</p>
+      <div class="wrapx">
+        <table>
+          <thead><tr><th>Name</th><th>Site</th><th>Job track</th></tr></thead>
+          <tbody id="partnerRows"><tr><td colspan="3" style="color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card hidden" id="assignCard">
+      <h2>Assign mentees and partner access</h2>
+      <p style="color:var(--muted);margin-top:-6px">Mentors see only the youth assigned to them. A partner sees a youth's job track only after the guardian signs consent, and you record that here.</p>
+      <form id="assignForm">
+        <div class="row">
+          <div><label for="asStaff">Mentor or partner</label><select id="asStaff"></select></div>
+          <div><label for="asYouth">Youth</label><select id="asYouth"></select></div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div><label class="check" style="margin-top:0"><input type="checkbox" id="asConsent"><span>For partners: the guardian has signed consent for this partner to see this youth's job track.</span></label></div>
+          <div><label for="asGuardian">Guardian name, as signed (partners only)</label><input id="asGuardian"></div>
+        </div>
+        <p><button type="submit">Assign</button></p>
+      </form>
+      <div class="wrapx">
+        <table>
+          <thead><tr><th>Who</th><th>Youth</th><th>Guardian consent</th><th></th></tr></thead>
+          <tbody id="assignRows"></tbody>
         </table>
       </div>
     </div>
@@ -121,7 +154,7 @@ tr.detail td{background:#FAF9F5;padding:16px}
         <div class="row">
           <div><label for="sfn">Full name</label><input id="sfn" required></div>
           <div><label for="sfe">Email</label><input id="sfe" type="email" required></div>
-          <div><label for="sfr">Role</label><select id="sfr"><option value="staff">Mentor or staff</option><option value="admin">Admin (can add people and delete records)</option></select></div>
+          <div><label for="sfr">Role</label><select id="sfr"><option value="staff">Mentor or staff</option><option value="partner">Partner (employer, job track only)</option><option value="admin">Admin (can add people and delete records)</option></select></div>
           <div><label for="sfp">Temporary password (12+ characters)</label><input id="sfp" type="password" minlength="12" autocomplete="new-password" required></div>
         </div>
         <p><button type="submit">Add person</button></p>
@@ -179,10 +212,18 @@ function setSignedIn(staff) {
   $("auth").classList.add("hidden");
   $("app").classList.remove("hidden");
   $("signout").classList.remove("hidden");
-  $("who").textContent = `${staff.name} (${staff.role === "admin" ? "admin" : "staff"}) · ${staff.email}`;
-  loadYouth();
-  $("staffCard").classList.toggle("hidden", staff.role !== "admin");
-  if (staff.role === "admin") loadStaff();
+  const label = staff.role === "admin" ? "admin" : staff.role === "partner" ? "partner" : "mentor or staff";
+  $("who").textContent = `${staff.name} (${label}) · ${staff.email}`;
+  const partner = staff.role === "partner";
+  const admin = staff.role === "admin";
+  $("youthCard").classList.toggle("hidden", partner);
+  $("listCard").classList.toggle("hidden", partner);
+  $("partnerCard").classList.toggle("hidden", !partner);
+  $("staffCard").classList.toggle("hidden", !admin);
+  $("assignCard").classList.toggle("hidden", !admin);
+  if (partner) loadPartner();
+  else if (admin) refreshAdmin();
+  else loadYouth();
 }
 
 function signOut(message = true) {
@@ -369,15 +410,78 @@ $("youthForm").onsubmit = async (e) => {
   } catch (err) { say(err.message); }
 };
 
+let staffList = [];
+
 async function loadStaff() {
   try {
     const d = await api("GET", "/staff");
-    $("staffRows").innerHTML = d.staff.map(s => `
+    staffList = d.staff;
+    $("staffRows").innerHTML = staffList.map(s => `
       <tr><td><b>${esc(s.name)}</b></td><td>${esc(s.email)}</td>
-      <td>${s.role === "admin" ? '<span class="tag">Admin</span>' : "Mentor or staff"}</td>
+      <td>${s.role === "admin" ? '<span class="tag">Admin</span>' : s.role === "partner" ? "Partner, job track only" : "Mentor or staff"}</td>
       <td>${fmtDate(s.created_at)}</td></tr>`).join("");
   } catch (err) { say(err.message); }
 }
+
+async function refreshAdmin() {
+  await loadYouth();
+  await loadStaff();
+  await loadAssignments();
+}
+
+async function loadAssignments() {
+  try {
+    const d = await api("GET", "/assignments");
+    $("asStaff").innerHTML = staffList.filter(s => s.role !== "admin").map(s =>
+      `<option value="${esc(s.id)}">${esc(s.name)} (${s.role === "partner" ? "partner" : "mentor"})</option>`).join("");
+    $("asYouth").innerHTML = youth.map(y => `<option value="${esc(y.id)}">${esc(y.first_name)} ${esc(y.last_name)}</option>`).join("");
+    $("assignRows").innerHTML = d.assignments.length ? d.assignments.map(a => `
+      <tr><td>${esc(a.staff_name)} <span class="sub">${a.role === "partner" ? "Partner" : "Mentor"}</span></td>
+      <td>${esc(a.first_name)} ${esc(a.last_name)}</td>
+      <td>${a.role === "partner" ? (a.guardian_consent_at ? `Signed by ${esc(a.guardian_consent_by)}, ${fmtDate(a.guardian_consent_at)}` : "Not on file") : "Not needed"}</td>
+      <td><button class="ghost" data-staff="${esc(a.staff_id)}" data-youth="${esc(a.youth_id)}">Remove</button></td></tr>`).join("")
+      : '<tr><td colspan="4" style="color:var(--muted)">No assignments yet.</td></tr>';
+  } catch (err) { say(err.message); }
+}
+
+async function loadPartner() {
+  try {
+    const d = await api("GET", "/youth");
+    $("partnerRows").innerHTML = d.youth.length ? d.youth.map(y => `
+      <tr><td><b>${esc(y.firstName)} ${esc(y.lastName)}</b></td>
+      <td>${y.site === "jdc" ? "Detention Center" : "STARS Academy"}</td>
+      <td>${y.jobs.length ? y.jobs.map(j => `<div>${esc(j.title)}${j.business ? `, ${esc(j.business)}` : ""}${j.status ? `: ${esc(j.status)}` : ""}</div>`).join("") : '<span class="sub">No job track yet.</span>'}</td></tr>`).join("")
+      : '<tr><td colspan="3" style="color:var(--muted)">No youth have been shared with you yet.</td></tr>';
+  } catch (err) { say(err.message); }
+}
+
+$("assignForm").onsubmit = async (e) => {
+  e.preventDefault();
+  if (!$("asStaff").value || !$("asYouth").value) { say("Add a staff member and a youth first."); return; }
+  const picked = staffList.find(s => s.id === $("asStaff").value);
+  try {
+    await api("POST", "/assignments", {
+      staffId: $("asStaff").value,
+      youthId: $("asYouth").value,
+      guardianConsent: $("asConsent").checked,
+      guardianName: $("asGuardian").value.trim()
+    });
+    e.target.reset();
+    say(picked && picked.role === "partner" ? "Partner access added. Keep the signed consent form on file." : "Youth assigned.", "ok");
+    await loadAssignments();
+  } catch (err) { say(err.message); }
+};
+
+$("assignRows").onclick = async (e) => {
+  const btn = e.target.closest("button[data-staff]");
+  if (!btn) return;
+  if (!confirm("Remove this access? They will no longer see this youth.")) return;
+  try {
+    await api("DELETE", "/assignments", { staffId: btn.dataset.staff, youthId: btn.dataset.youth });
+    say("Access removed.", "ok");
+    await loadAssignments();
+  } catch (err) { say(err.message); }
+};
 
 $("staffForm").onsubmit = async (e) => {
   e.preventDefault();
@@ -386,7 +490,7 @@ $("staffForm").onsubmit = async (e) => {
     await api("POST", "/staff", { name: $("sfn").value.trim(), email: $("sfe").value.trim(), role: $("sfr").value, password: $("sfp").value });
     e.target.reset();
     say("Account created. Share the email and temporary password with them privately.", "ok");
-    await loadStaff();
+    await refreshAdmin();
   } catch (err) { say(err.message); }
 };
 
