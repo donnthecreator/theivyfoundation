@@ -85,7 +85,12 @@ exports.handler = async (event) => {
         setupCodeSet: sc.length > 0,
         setupCodeLength: sc.length,
         setupCodeHasWhitespace: /\s/.test(sc),
-        sessionSecretSet: Boolean(process.env.STAFF_SESSION_SECRET)
+        sessionSecretSet: Boolean(process.env.STAFF_SESSION_SECRET),
+        setupCodeStartsWith: sc.slice(0, 2),
+        setupCodeEndsWith: sc.slice(-2),
+        check: (event.queryStringParameters && event.queryStringParameters.code !== undefined)
+          ? { typedLength: String(event.queryStringParameters.code).length, matches: String(event.queryStringParameters.code).trim() === sc.trim() }
+          : null
       });
     } catch (err) {
       return json(500, { ok: false, errorName: err.name, code: err.code || null, message: String(err.message || '').slice(0, 300) });
