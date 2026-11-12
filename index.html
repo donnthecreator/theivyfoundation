@@ -74,7 +74,12 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:1re
 .sitelink a:hover{text-decoration:underline}
 .pn-drop{}
 
-@media (max-width:720px){.pn-link,.pn-cta{display:none}.pn-menu{display:block}.pn-side{gap:0}}
+@media (max-width:720px){.pn-link,.pn-cta{display:none}.pn-menu{display:block}.pn-side{gap:0}.pillnav{justify-content:space-between;width:min(92vw,420px)}.pn-side.pn-l,.pn-side.pn-r{flex:1}.pn-side.pn-r{justify-content:flex-end}}
+.gi{position:relative;display:inline-block}
+.gi-menu{display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);min-width:210px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.12);padding:.4rem;z-index:20}
+.gi.open .gi-menu{display:block}
+.gi-menu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--ink);font-weight:600;font-size:1rem;padding:.7rem .9rem;border-radius:8px;cursor:pointer}
+.gi-menu button:hover{background:#F0EEE8}
 .float-cta{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:50;background:var(--signal);color:#fff;border:0;font-weight:800;font-size:1.05rem;padding:.9rem 1.3rem;border-radius:999px;cursor:pointer;box-shadow:0 12px 30px rgba(12,59,34,.35)}
 .float-cta[hidden]{display:none}
 .vhero{position:relative;height:100svh;min-height:560px;margin:calc(-1.25rem - env(safe-area-inset-top,0px)) calc(50% - 50vw) 0;width:100vw;display:grid;place-items:center;overflow:hidden;background:#0B2418;isolation:isolate}
@@ -785,7 +790,7 @@ function render(){
 }
 const bind={};
 
-function welcome(){return `
+function welcome(){const TOOLS=[]; /* add {name, by, what} for each student tool shared with permission */ return `
  <section class="vhero" aria-label="Welcome">
   ${S.heroVideo?`<video src="${esc(S.heroVideo)}" autoplay muted loop playsinline aria-hidden="true"></video>`:photoOf("hero")?`<img class="vphoto" src="${photoOf("hero")}" alt="">`:`<div class="vbg" aria-hidden="true"></div>`}
   <div class="shade" aria-hidden="true"></div>
@@ -793,7 +798,7 @@ function welcome(){return `
   <span class="down" aria-hidden="true">Scroll</span>
  </section>
  <section class="hero" style="padding-top:6rem">
-  <nav class="qlinks" aria-label="Quick links"><button class="ql" id="q-youth">I'm a student</button><button class="ql" id="q-staff">Staff and mentors</button><button class="ql" id="q-partners">Partner businesses</button><button class="ql" id="q-stars">STARS program</button></nav>
+  <nav class="qlinks" aria-label="Quick links"><div class="gi" id="gi"><button class="ql" id="gi-btn" aria-haspopup="true" aria-expanded="false" aria-controls="gi-menu">Get involved <span aria-hidden="true">&darr;</span></button><div class="gi-menu" id="gi-menu" role="menu"><button role="menuitem" id="gi-student">I'm a student</button><button role="menuitem" id="gi-mentor">I'm a mentor</button></div></div><button class="ql" id="q-partners">Partner businesses</button><button class="ql" id="q-stars">STARS program</button></nav>
   <p class="muted" style="font-size:1rem">Serving youth at the Tuscaloosa County Juvenile Detention Center and STARS Academy, in partnership with New Heights Community Center.</p>
  </section>
  <div class="ticker" aria-hidden="true"><div class="ticker-track">${tickerItems()}${tickerItems()}</div></div>
@@ -851,6 +856,17 @@ function welcome(){return `
    <div class="pillar"><span class="pnum">2</span><h3>A mentor every month</h3><p>After release, an Ivy Foundation mentor visits monthly, reviews the plan, and tracks school, work, and court status. Consistent adult support is the common thread in the programs that work.</p></div>
    <div class="pillar"><span class="pnum">3</span><h3>A real job, close to home</h3><p>Local partner businesses post jobs that fit each youth's interests, age, and ride situation. A paycheck plus an adult job mentor is the exact combination behind the 43% drop in violent arrests.</p></div>
   </div>
+ </section>
+
+ <section class="sect">
+  <span class="eyebrow">Tech is big</span>
+  <h2>Our youth are learning to master technology.</h2>
+  <p>Many of the jobs our young people will apply for in ten years do not exist yet, and most will involve working alongside AI. We teach students to use AI tools the way a good employee would: build something real, and check the work instead of trusting it.</p>
+  <p>The goal is to raise groups of developers and engineers from communities that have been left out of tech. Students start in the Build Lab and move into real projects, and then toward jobs with partner businesses.</p>
+  <h3 style="margin-top:1.6rem">Built by our youth</h3>
+  <p class="muted">Tools our students have built with AI, shared with their permission.</p>
+  ${TOOLS.length?`<div class="ej-mini">${TOOLS.map(t=>`<div style="border:1px solid var(--line);border-radius:12px;padding:1rem;background:#fff"><b>${esc(t.name)}</b><span class="sub" style="display:block">Built by ${esc(t.by)}</span><p style="margin:.4rem 0 0">${esc(t.what)}</p></div>`).join("")}</div>`:`<div class="note">Our first student tools are on the way. Each one is shared with the student's permission and goes by first name and last initial.</div>`}
+  <p style="margin-top:1.2rem"><button class="btn ghost" data-nav="youthNew">Join the Build Lab</button></p>
  </section>
 
  <section class="sect">
@@ -994,7 +1010,7 @@ function runCounters(){
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){animate(e.target);io.unobserve(e.target)}}),{threshold:.4});
   els.forEach(el=>io.observe(el));
 }
-bind.welcome=()=>{const y0=()=>go("studentChoose"),s0=()=>go("staffLogin"),p0=()=>go("partners",{from:"welcome"});$("#d-youth").onclick=y0;$("#q-youth").onclick=y0;$("#d-staff").onclick=s0;$("#q-staff").onclick=s0;$("#d-partners").onclick=p0;$("#q-partners").onclick=p0;const st0=()=>go("stars");$("#d-stars").onclick=st0;$("#q-stars").onclick=st0;$("#hero-cta").onclick=()=>go("about");
+bind.welcome=()=>{const y0=()=>go("studentChoose"),s0=()=>go("staffLogin"),p0=()=>go("partners",{from:"welcome"});$("#d-youth").onclick=y0;$("#d-staff").onclick=s0;const gi=$("#gi"),gb=$("#gi-btn");gb.onclick=()=>{const o=gi.classList.toggle("open");gb.setAttribute("aria-expanded",String(o))};$("#gi-student").onclick=y0;$("#gi-mentor").onclick=s0;document.onclick=e=>{const g=document.getElementById("gi");if(g&&!g.contains(e.target))g.classList.remove("open")};$("#d-partners").onclick=p0;$("#q-partners").onclick=p0;const st0=()=>go("stars");$("#d-stars").onclick=st0;$("#q-stars").onclick=st0;$("#hero-cta").onclick=()=>go("about");
   document.querySelectorAll(".srcref").forEach(a=>a.onclick=e=>{e.preventDefault();document.querySelector(".sources").scrollIntoView({behavior:"smooth"})});runCounters();
   const vp=$("#vp-stars"),vd=$("#v-stars");if(vp&&vd){vp.onclick=()=>{$("#vw-stars").classList.add("on");vd.controls=true;vd.play().catch(()=>{})};vd.onended=()=>$("#vw-stars").classList.remove("on")}};
 
