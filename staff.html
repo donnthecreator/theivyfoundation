@@ -113,6 +113,26 @@ tr.detail td{background:#FAF9F5;padding:16px}
         </table>
       </div>
     </div>
+
+    <div class="card hidden" id="staffCard">
+      <h2>Staff and mentors</h2>
+      <p style="color:var(--muted);margin-top:-6px">Mentors are staff accounts. Each person signs in with their own email and password. Share the temporary password in person or in a private message, not in a group chat.</p>
+      <form id="staffForm">
+        <div class="row">
+          <div><label for="sfn">Full name</label><input id="sfn" required></div>
+          <div><label for="sfe">Email</label><input id="sfe" type="email" required></div>
+          <div><label for="sfr">Role</label><select id="sfr"><option value="staff">Mentor or staff</option><option value="admin">Admin (can add people and delete records)</option></select></div>
+          <div><label for="sfp">Temporary password (12+ characters)</label><input id="sfp" type="password" minlength="12" autocomplete="new-password" required></div>
+        </div>
+        <p><button type="submit">Add person</button></p>
+      </form>
+      <div class="wrapx">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th></tr></thead>
+          <tbody id="staffRows"><tr><td colspan="4" style="color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -161,6 +181,8 @@ function setSignedIn(staff) {
   $("signout").classList.remove("hidden");
   $("who").textContent = `${staff.name} (${staff.role === "admin" ? "admin" : "staff"}) · ${staff.email}`;
   loadYouth();
+  $("staffCard").classList.toggle("hidden", staff.role !== "admin");
+  if (staff.role === "admin") loadStaff();
 }
 
 function signOut(message = true) {
@@ -344,6 +366,27 @@ $("youthForm").onsubmit = async (e) => {
     e.target.reset();
     say("Youth account created.", "ok");
     await loadYouth();
+  } catch (err) { say(err.message); }
+};
+
+async function loadStaff() {
+  try {
+    const d = await api("GET", "/staff");
+    $("staffRows").innerHTML = d.staff.map(s => `
+      <tr><td><b>${esc(s.name)}</b></td><td>${esc(s.email)}</td>
+      <td>${s.role === "admin" ? '<span class="tag">Admin</span>' : "Mentor or staff"}</td>
+      <td>${fmtDate(s.created_at)}</td></tr>`).join("");
+  } catch (err) { say(err.message); }
+}
+
+$("staffForm").onsubmit = async (e) => {
+  e.preventDefault();
+  if ($("sfp").value.length < 12) { say("The temporary password needs at least 12 characters."); return; }
+  try {
+    await api("POST", "/staff", { name: $("sfn").value.trim(), email: $("sfe").value.trim(), role: $("sfr").value, password: $("sfp").value });
+    e.target.reset();
+    say("Account created. Share the email and temporary password with them privately.", "ok");
+    await loadStaff();
   } catch (err) { say(err.message); }
 };
 

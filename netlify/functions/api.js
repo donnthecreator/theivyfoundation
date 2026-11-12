@@ -228,6 +228,31 @@ exports.handler = async (event) => {
 
     if (route === '/me' && method === 'GET') return json(200, { staff });
 
+    if (route === '/staff' && method === 'GET') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can see the staff list' });
+      const rows = await sql`SELECT id, name, email, role, created_at FROM staff ORDER BY role, name`;
+      return json(200, { staff: rows });
+    }
+
+    if (route === '/staff' && method === 'POST') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can add staff' });
+      const name = cleanName(body.name);
+      const email = String(body.email || '').trim().toLowerCase();
+      const role = body.role === 'admin' ? 'admin' : 'staff';
+      if (!name || name.length < 2) return json(400, { error: "Type the person's full name." });
+      if (!validEmail(email)) return json(400, { error: 'Type a valid email address.' });
+      if (String(body.password || '').length < 12) return json(400, { error: 'The temporary password needs at least 12 characters.' });
+      try {
+        const rows = await sql`INSERT INTO staff (email, name, pass_hash, role) VALUES (${email}, ${name}, ${hashSecret(body.password)}, ${role})
+          RETURNING id, email, name, role, created_at`;
+        await audit(staff.id, 'create_staff', rows[0].email);
+        return json(201, { staff: rows[0] });
+      } catch (err) {
+        if (err && err.code === '23505') return json(409, { error: 'That email already has an account.' });
+        throw err;
+      }
+    }
+
     if (route === '/youth' && method === 'GET') {
       const rows = await sql`
         SELECT y.id, y.first_name, y.last_name, y.site, y.status, y.consent_on_file, y.consent_date, y.guardian_email, y.created_at,
