@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>The Process | Staff</title>
+<style>
+:root{--green:#146C37;--green2:#1E8E4E;--ink:#141414;--muted:#5B5A55;--line:#E2DFD6;--paper:#F6F5F1;--card:#fff;--red:#9B1C1C}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.5}
+header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{font-size:1.15rem;margin:0}
+header small{color:var(--muted);display:block;font-size:.85rem}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+h2{font-size:1.05rem;margin:0 0 12px}
+label{display:block;font-size:.88rem;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:10px 11px;border:1px solid #cfcbbf;border-radius:7px;background:#fff;color:var(--ink)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+button{font:inherit;font-weight:700;padding:10px 16px;border-radius:7px;border:0;background:var(--green);color:#fff;cursor:pointer}
+button:hover{background:var(--green2)}
+button.ghost{background:#fff;color:var(--green);border:1px solid var(--green)}
+button.danger{background:var(--red)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;color:var(--ink)}
+.check input{width:auto;margin-top:4px}
+.msg{padding:10px 12px;border-radius:7px;margin:12px 0;font-size:.95rem}
+.msg.err{background:#FBE9E9;color:var(--red)}
+.msg.ok{background:#E6F4EA;color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tag{display:inline-block;font-size:.78rem;padding:2px 8px;border-radius:999px;background:#E6F4EA;color:var(--green);font-weight:700}
+.tag.no{background:#FBE9E9;color:var(--red)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acts select{width:auto;padding:6px 8px}
+.acts button{padding:7px 10px;font-size:.88rem}
+details summary{cursor:pointer;color:var(--green);font-weight:700;margin-bottom:10px}
+.hidden{display:none!important}
+.wrapx{overflow-x:auto}
+@media (max-width:640px){th:nth-child(3),td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>The Process: Staff</h1><small id="who">Not signed in</small></div>
+  <button class="ghost hidden" id="signout">Sign out</button>
+</header>
+<main>
+  <div id="msg" class="msg hidden"></div>
+
+  <section id="auth" class="card">
+    <h2>Sign in</h2>
+    <form id="loginForm">
+      <div class="row">
+        <div><label for="le">Email</label><input id="le" type="email" autocomplete="username" required></div>
+        <div><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>
+      </div>
+      <p><button type="submit">Sign in</button></p>
+    </form>
+    <details>
+      <summary>First-time setup (creates the first admin account)</summary>
+      <form id="setupForm">
+        <div class="row">
+          <div><label for="sn">Your name</label><input id="sn" required></div>
+          <div><label for="se">Email</label><input id="se" type="email" required></div>
+          <div><label for="sp">Password (12+ characters)</label><input id="sp" type="password" minlength="12" autocomplete="new-password" required></div>
+          <div><label for="sc">Setup code</label><input id="sc" type="password" required></div>
+        </div>
+        <p><button type="submit">Create admin account</button></p>
+      </form>
+    </details>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="card">
+      <h2>Add a youth</h2>
+      <p class="muted" style="color:var(--muted);margin-top:-6px">Do not create an account until the signed guardian permission form is on file.</p>
+      <form id="youthForm">
+        <div class="row">
+          <div><label for="yf">First name</label><input id="yf" required></div>
+          <div><label for="yl">Last name</label><input id="yl" required></div>
+          <div><label for="ys">Site</label><select id="ys"><option value="jdc">Juvenile Detention Center</option><option value="stars">STARS Academy</option></select></div>
+          <div><label for="yp">4-digit PIN for the tablet</label><input id="yp" inputmode="numeric" pattern="\d{4}" maxlength="4" required></div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div><label for="gn">Guardian name</label><input id="gn" required></div>
+          <div><label for="gr">Relationship to youth</label><input id="gr" placeholder="Mother, father, grandparent, etc." required></div>
+          <div><label for="gph">Guardian phone</label><input id="gph" type="tel"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="consent" required><span>The signed guardian permission form is on file.</span></label>
+        <p><button type="submit">Create youth account</button></p>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Youth</h2>
+      <div class="wrapx">
+        <table>
+          <thead><tr><th>Name</th><th>Site</th><th>Lessons</th><th>Last visit</th><th>Actions</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="5" style="color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = "/api";
+const $ = (id) => document.getElementById(id);
+let token = null;
+let me = null;
+let youth = [];
+
+try { token = sessionStorage.getItem("tp_token"); } catch (e) {}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function say(text, kind = "err") {
+  const m = $("msg");
+  m.textContent = text;
+  m.className = "msg " + (kind === "ok" ? "ok" : "err");
+  m.classList.remove("hidden");
+  clearTimeout(say.t);
+  say.t = setTimeout(() => m.classList.add("hidden"), 6000);
+}
+
+async function api(method, route, body) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  let res;
+  try {
+    res = await fetch(API + route, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) {
+    throw new Error("Could not reach the server. Check your connection and try again.");
+  }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    if (res.status === 401 && token) signOut(false);
+    throw new Error(data.error || "Something went wrong.");
+  }
+  return data;
+}
+
+function setSignedIn(staff) {
+  me = staff;
+  $("auth").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("signout").classList.remove("hidden");
+  $("who").textContent = `${staff.name} (${staff.role === "admin" ? "admin" : "staff"}) · ${staff.email}`;
+  loadYouth();
+}
+
+function signOut(message = true) {
+  token = null; me = null; youth = [];
+  try { sessionStorage.removeItem("tp_token"); } catch (e) {}
+  $("app").classList.add("hidden");
+  $("auth").classList.remove("hidden");
+  $("signout").classList.add("hidden");
+  $("who").textContent = "Not signed in";
+  if (message) say("You have been signed out.", "ok");
+}
+
+$("signout").onclick = () => signOut(true);
+
+$("loginForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const d = await api("POST", "/login", { email: $("le").value.trim(), password: $("lp").value });
+    token = d.token;
+    try { sessionStorage.setItem("tp_token", token); } catch (err) {}
+    $("lp").value = "";
+    setSignedIn(d.staff);
+  } catch (err) { say(err.message); }
+};
+
+$("setupForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await api("POST", "/setup", { name: $("sn").value.trim(), email: $("se").value.trim(), password: $("sp").value, setupCode: $("sc").value });
+    say("Admin account created. Sign in with your email and password.", "ok");
+    $("sp").value = ""; $("sc").value = "";
+  } catch (err) { say(err.message); }
+};
+
+async function loadYouth() {
+  try {
+    const d = await api("GET", "/youth");
+    youth = d.youth;
+    renderYouth();
+  } catch (err) { say(err.message); }
+}
+
+function fmtDate(v) {
+  if (!v) return "None yet";
+  return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function renderYouth() {
+  const tb = $("rows");
+  if (!youth.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No youth yet. Add one above.</td></tr>';
+    return;
+  }
+  tb.innerHTML = youth.map(y => `
+    <tr data-id="${esc(y.id)}">
+      <td><b>${esc(y.first_name)} ${esc(y.last_name)}</b><br><span class="tag ${y.consent_on_file ? "" : "no"}">${y.consent_on_file ? "Consent on file" : "No consent"}</span></td>
+      <td>${y.site === "jdc" ? "Detention Center" : "STARS Academy"}</td>
+      <td>${Number(y.lessons_done || 0)} of 8</td>
+      <td>${fmtDate(y.last_visit)}</td>
+      <td>
+        <div class="acts">
+          <select class="lsel" aria-label="Lesson">${[1,2,3,4,5,6,7,8].map(n => `<option value="${n}">Lesson ${n}</option>`).join("")}</select>
+          <button class="ghost" data-act="lesson">Mark done</button>
+          <button class="ghost" data-act="visit">Log visit</button>
+          ${me && me.role === "admin" ? '<button class="danger" data-act="delete">Delete</button>' : ""}
+        </div>
+      </td>
+    </tr>`).join("");
+}
+
+$("rows").onclick = async (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const row = btn.closest("tr");
+  const id = row.dataset.id;
+  const act = btn.dataset.act;
+  try {
+    if (act === "lesson") {
+      const lesson = Number(row.querySelector(".lsel").value);
+      await api("POST", `/youth/${id}/lesson`, { lesson });
+      say("Lesson saved.", "ok");
+    } else if (act === "visit") {
+      const notes = prompt("Visit notes (optional):", "");
+      if (notes === null) return;
+      await api("POST", `/youth/${id}/visit`, { notes: notes.trim() || null });
+      say("Visit logged.", "ok");
+    } else if (act === "delete") {
+      const name = row.querySelector("b").textContent;
+      if (!confirm(`Permanently delete ${name} and all their records? This cannot be undone.`)) return;
+      await api("DELETE", `/youth/${id}`);
+      say("Record deleted.", "ok");
+    }
+    await loadYouth();
+  } catch (err) { say(err.message); }
+};
+
+$("youthForm").onsubmit = async (e) => {
+  e.preventDefault();
+  if (!/^\d{4}$/.test($("yp").value)) { say("The PIN must be exactly 4 digits."); return; }
+  try {
+    await api("POST", "/youth", {
+      firstName: $("yf").value.trim(),
+      lastName: $("yl").value.trim(),
+      site: $("ys").value,
+      pin: $("yp").value,
+      guardianName: $("gn").value.trim(),
+      guardianRelation: $("gr").value.trim(),
+      guardianPhone: $("gph").value.trim() || null,
+      consentOnFile: $("consent").checked
+    });
+    e.target.reset();
+    say("Youth account created.", "ok");
+    await loadYouth();
+  } catch (err) { say(err.message); }
+};
+
+// Restore a session from this browser tab, if one exists.
+(async () => {
+  if (!token) return;
+  try {
+    const d = await api("GET", "/me");
+    setSignedIn(d.staff);
+  } catch (err) { signOut(false); }
+})();
+</script>
+</body>
+</html>
