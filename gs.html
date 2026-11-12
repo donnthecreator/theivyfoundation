@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join God's Sons | The Ivy Foundation</title>
+<meta name="description" content="Sign your son up for God's Sons, the Ivy Foundation brotherhood for young men in West Alabama: mentors, meetings, awards, family meals, and game tickets.">
+<meta property="og:title" content="You're invited: God's Sons">
+<meta property="og:description" content="A brotherhood for young men in West Alabama. Mentors, family meals, awards, and game tickets. Sign your son up in two minutes.">
+<meta name="theme-color" content="#0E0E0E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0E0E0E;--paper:#F5F3EE;--gold:#C9A227;--gold2:#E2C25A;--muted:#5E5B54;--line:#DDD8CC;--red:#9B1C1C;--green:#146C37}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--paper);color:var(--ink);font-size:17px;line-height:1.5}
+.hero{background:var(--ink);color:#fff;padding:28px 20px 56px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto -10% -40% auto;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(201,162,39,.22),transparent 65%);pointer-events:none}
+.top{max-width:760px;margin:0 auto 40px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:10px;font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;color:#cfcac0}
+.brand svg{flex:none}
+.inner{max-width:760px;margin:0 auto;position:relative;z-index:1}
+.mono{font-family:Anton,Impact,sans-serif;font-size:clamp(5rem,20vw,9rem);line-height:.85;color:var(--gold);letter-spacing:.02em;margin:0}
+h1{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:clamp(2.2rem,7vw,3.6rem);line-height:1;letter-spacing:.01em;margin:.4rem 0 1rem;text-transform:uppercase}
+.lead{font-size:1.15rem;color:#e8e4da;max-width:56ch;margin:0}
+.invited{display:inline-block;margin-bottom:14px;border:1px solid var(--gold);color:var(--gold2);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.perks{max-width:800px;margin:-28px auto 0;padding:0 20px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;position:relative;z-index:2}
+@media (max-width:760px){.perks{grid-template-columns:1fr 1fr}.perks .perk:last-child{grid-column:1 / -1}}
+.perk{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+.perk b{display:block;font-size:1rem}
+.perk span{font-size:.88rem;color:var(--muted)}
+.perk i{display:block;width:28px;height:4px;background:var(--gold);border-radius:2px;margin-bottom:10px}
+main{max-width:760px;margin:0 auto;padding:28px 20px 70px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0}
+.card h2{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:1.6rem;letter-spacing:.02em;text-transform:uppercase;margin:0 0 4px}
+.card .hint{color:var(--muted);font-size:.92rem;margin:0 0 6px}
+.step{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--gold);font-weight:700;font-size:.9rem;margin-right:8px;vertical-align:3px}
+label{display:block;font-weight:600;font-size:.95rem;margin:14px 0 5px}
+label .opt{font-weight:400;color:var(--muted);font-size:.85rem}
+input,select,textarea{width:100%;font:inherit;padding:12px 13px;border:1px solid #c9c3b4;border-radius:9px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+textarea{min-height:84px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip span{display:inline-block;border:1px solid #c9c3b4;border-radius:999px;padding:8px 14px;font-size:.92rem;cursor:pointer;user-select:none;background:#fff}
+.chip input:checked+span{background:var(--ink);border-color:var(--ink);color:var(--gold2);font-weight:700}
+.chip input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.check{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;font-weight:400}
+.check input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--ink)}
+.req{color:var(--red)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+button{font:inherit;font-weight:700;border:0;border-radius:999px;cursor:pointer}
+.go{width:100%;background:var(--ink);color:var(--gold2);padding:16px 22px;font-size:1.1rem;letter-spacing:.04em;text-transform:uppercase;margin-top:6px}
+.go:hover{background:#262626}
+.go:disabled{opacity:.6;cursor:default}
+.err{background:#FBE9E9;color:var(--red);border-radius:9px;padding:10px 12px;margin:12px 0 0;font-weight:600}
+.fine{font-size:.85rem;color:var(--muted);margin-top:14px}
+.done{text-align:center;padding:30px 20px}
+.done .mono{font-size:6rem;color:var(--ink)}
+.done h2{font-size:2rem}
+.share{background:var(--gold);color:var(--ink);padding:13px 22px;font-size:1rem;margin-top:10px}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 20px 40px}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="top">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 400 400" aria-hidden="true"><rect x="80" y="90" width="40" height="190" fill="#C9A227"/><rect x="146" y="90" width="40" height="190" fill="#fff"/><rect x="214" y="90" width="40" height="190" fill="#fff"/><rect x="280" y="90" width="40" height="190" fill="#fff"/><rect x="60" y="300" width="280" height="22" fill="#fff"/></svg>
+      The Ivy Foundation
+    </div>
+  </div>
+  <div class="inner">
+    <span class="invited">You're invited</span>
+    <p class="mono" aria-hidden="true">GS</p>
+    <h1>God's Sons.<br>A brotherhood. A family.</h1>
+    <p class="lead">God's Sons is our mentorship brotherhood for young men in West Alabama. Your son gets mentors who show up, a crew of young men pushing each other, and a family that celebrates him. Signing him up takes about two minutes.</p>
+  </div>
+</section>
+
+<div class="perks" aria-label="What members get">
+  <div class="perk"><i></i><b>Mentors</b><span>Grown men who show up and stay.</span></div>
+  <div class="perk"><i></i><b>Brotherhood meetings</b><span>Real talk, faith, and goals.</span></div>
+  <div class="perk"><i></i><b>Awards and giveaways</b><span>We celebrate wins on and off the field.</span></div>
+  <div class="perk"><i></i><b>GS family meals</b><span>Bring the whole family to the table.</span></div>
+  <div class="perk"><i></i><b>Free game tickets</b><span>Sporting events with the brotherhood.</span></div>
+</div>
+
+<main>
+<form id="f" novalidate>
+  <div class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+
+  <div class="card">
+    <h2><span class="step">1</span>About you</h2>
+    <p class="hint">The parent or guardian signing him up.</p>
+    <div class="row">
+      <div><label for="pName">Your full name <span class="req">*</span></label><input id="pName" autocomplete="name" maxlength="60" required></div>
+      <div><label for="pRel">You are his <span class="req">*</span></label>
+        <select id="pRel" required><option value="">Choose</option><option>Mother</option><option>Father</option><option>Grandmother</option><option>Grandfather</option><option>Aunt</option><option>Uncle</option><option>Legal guardian</option><option>Other family</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="pPhone">Cell phone <span class="req">*</span></label><input id="pPhone" type="tel" autocomplete="tel" maxlength="30" placeholder="205-555-0123" required></div>
+      <div><label for="pEmail">Email <span class="opt">(optional)</span></label><input id="pEmail" type="email" autocomplete="email" maxlength="120"></div>
+    </div>
+    <label>Best way to reach you</label>
+    <div class="seg" role="radiogroup" aria-label="Best way to reach you">
+      <label class="chip" style="margin:0"><input type="radio" name="contactPref" value="text" checked><span>Text</span></label>
+      <label class="chip" style="margin:0"><input type="radio" name="contactPref" value="call"><span>Call</span></label>
+      <label class="chip" style="margin:0"><input type="radio" name="contactPref" value="email"><span>Email</span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>About your son</h2>
+    <p class="hint">So we know who he is and how to serve him.</p>
+    <div class="row">
+      <div><label for="kFirst">First name <span class="req">*</span></label><input id="kFirst" maxlength="60" required></div>
+      <div><label for="kLast">Last name <span class="req">*</span></label><input id="kLast" maxlength="60" required></div>
+    </div>
+    <div class="row">
+      <div><label for="kAge">Age <span class="req">*</span></label><select id="kAge" required><option value="">Choose</option></select></div>
+      <div><label for="kGrade">Grade <span class="opt">(optional)</span></label><select id="kGrade"><option value="">Choose</option><option>K</option><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option><option>11th</option><option>12th</option><option>Graduated</option><option>Not in school</option></select></div>
+    </div>
+    <label for="kSchool">School <span class="opt">(optional)</span></label><input id="kSchool" maxlength="80" placeholder="Example: Central High School">
+    <label>What's he into? <span class="opt">(pick any)</span></label>
+    <div class="chips" id="ints"></div>
+    <div class="row">
+      <div><label for="team">Favorite team <span class="opt">(for game tickets)</span></label><input id="team" maxlength="80" placeholder="Example: Alabama, Falcons"></div>
+      <div><label for="shirt">T-shirt size <span class="opt">(for giveaways)</span></label>
+        <select id="shirt"><option value="">Choose</option><option value="YS">Youth S</option><option value="YM">Youth M</option><option value="YL">Youth L</option><option value="AS">Adult S</option><option value="AM">Adult M</option><option value="AL">Adult L</option><option value="AXL">Adult XL</option><option value="A2XL">Adult 2XL</option><option value="A3XL">Adult 3XL</option></select></div>
+    </div>
+    <label for="food">Food allergies or things he doesn't eat <span class="opt">(for family meals)</span></label><input id="food" maxlength="200" placeholder="Example: peanuts, no pork">
+    <label for="ride">Getting to meetings <span class="opt">(optional)</span></label>
+    <select id="ride"><option value="">Choose</option><option>We can drive him</option><option>He needs a ride sometimes</option><option>He needs a ride most of the time</option><option>He can walk or take the bus</option></select>
+    <label for="goals">Anything you want his mentor to know? <span class="opt">(optional)</span></label>
+    <textarea id="goals" maxlength="400" placeholder="Goals, what he's working on, what he's good at, what you hope he gets out of this."></textarea>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">3</span>Permission</h2>
+    <label class="check"><input type="checkbox" id="cProgram"><span><b>I am his parent or legal guardian, and I give permission for my son to join God's Sons</b>, a mentorship program of The Ivy Foundation, including meetings and events with screened adult mentors. <span class="req">*</span></span></label>
+    <label class="check"><input type="checkbox" id="cMsg" checked><span>Send me meeting information, event invites, giveaways, family meals, and ticket offers by text or email. Reply STOP to texts any time to opt out.</span></label>
+    <label class="check"><input type="checkbox" id="cMedia"><span>The Ivy Foundation may share photos or video of my son from GS events on its website and social media.</span></label>
+    <div id="err" class="err hidden" role="alert"></div>
+    <button class="go" id="go" type="submit" style="margin-top:18px">Join the brotherhood</button>
+    <p class="fine">We use this only to run God's Sons and contact your family. We never sell it. Only Ivy Foundation leadership can see it. Questions or want it removed? Tell your son's mentor or any Ivy Foundation staff member.</p>
+  </div>
+</form>
+
+<div id="done" class="card done hidden" aria-live="polite">
+  <p class="mono" aria-hidden="true">GS</p>
+  <h2 id="doneTitle">Welcome to the family.</h2>
+  <p id="doneText">We'll reach out soon with the next meeting. Know another young man who should be in the room?</p>
+  <button class="share" id="share" type="button">Invite another family</button>
+  <p class="fine hidden" id="copied">Link copied. Paste it into a text.</p>
+</div>
+</main>
+
+<footer>God's Sons is a program of The Ivy Foundation, Tuscaloosa, Alabama. God, family, community, self.</footer>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var INTS = ["Football","Basketball","Baseball","Track","Soccer","Other sports","Music","Art","Tech and coding","Gaming","Cars","Cooking","Outdoors","Business","Church and faith"];
+  $("ints").innerHTML = INTS.map(function (t) { return '<label class="chip" style="margin:0"><input type="checkbox" value="' + t + '"><span>' + t + '</span></label>'; }).join("");
+  var ages = ""; for (var a = 6; a <= 19; a++) ages += "<option>" + a + "</option>"; $("kAge").innerHTML += ages;
+
+  var ref = "";
+  try { ref = (new URLSearchParams(location.search).get("ref") || "").replace(/[^\w-]/g, "").slice(0, 40); } catch (e) {}
+  var inviteUrl = location.origin + "/gs" + (ref ? "?ref=" + encodeURIComponent(ref) : "");
+
+  function fail(msg, focusId) {
+    $("err").textContent = msg; $("err").classList.remove("hidden");
+    if (focusId && $(focusId)) $(focusId).focus();
+  }
+
+  $("f").onsubmit = function (e) {
+    e.preventDefault();
+    $("err").classList.add("hidden");
+    var v = function (id) { return $(id).value.trim(); };
+    if (v("pName").length < 2) return fail("Type your full name.", "pName");
+    if (!v("pRel")) return fail("Choose how you are related to your son.", "pRel");
+    if (v("pPhone").replace(/\D/g, "").length < 10) return fail("Type a cell phone number we can reach you at.", "pPhone");
+    if (v("pEmail") && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v("pEmail"))) return fail("Check the email address.", "pEmail");
+    if (!v("kFirst") || v("kLast").length < 2) return fail("Type your son's first and last name.", v("kFirst") ? "kLast" : "kFirst");
+    if (!v("kAge")) return fail("Choose your son's age.", "kAge");
+    if (!$("cProgram").checked) return fail("Check the permission box so your son can join.", "cProgram");
+
+    var pref = document.querySelector('input[name="contactPref"]:checked');
+    var body = {
+      website: v("website"),
+      parentName: v("pName"), parentRelation: v("pRel"), parentPhone: v("pPhone"), parentEmail: v("pEmail"),
+      contactPref: pref ? pref.value : "text",
+      kidFirst: v("kFirst"), kidLast: v("kLast"), kidAge: Number(v("kAge")), kidGrade: v("kGrade"), kidSchool: v("kSchool"),
+      interests: Array.prototype.map.call(document.querySelectorAll("#ints input:checked"), function (i) { return i.value; }),
+      favoriteTeam: v("team"), shirtSize: v("shirt"), foodNotes: v("food"), transport: v("ride"), goals: v("goals"),
+      consentProgram: $("cProgram").checked, consentMessages: $("cMsg").checked, mediaOk: $("cMedia").checked, ref: ref
+    };
+    var btn = $("go"); btn.disabled = true; btn.textContent = "Saving...";
+    fetch("/api/gs/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        btn.disabled = false; btn.textContent = "Join the brotherhood";
+        if (!res.ok) return fail(res.d.error || "Something went wrong. Try again in a minute.");
+        $("f").classList.add("hidden");
+        $("done").classList.remove("hidden");
+        $("doneTitle").textContent = "Welcome to the family, " + body.kidFirst + ".";
+        if (res.d.already) $("doneText").textContent = "We already had " + body.kidFirst + " signed up, so you're all set. Know another young man who should be in the room?";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = "Join the brotherhood";
+        fail("We couldn't reach our server. Check your connection and try again.");
+      });
+  };
+
+  $("share").onclick = function () {
+    var data = { title: "God's Sons", text: "You're invited to sign your son up for God's Sons, a brotherhood and mentorship program from The Ivy Foundation.", url: inviteUrl };
+    if (navigator.share) { navigator.share(data).catch(function () {}); return; }
+    try { navigator.clipboard.writeText(data.text + " " + inviteUrl).then(function () { $("copied").classList.remove("hidden"); }); }
+    catch (e) { prompt("Copy this link:", inviteUrl); }
+  };
+})();
+</script>
+</body>
+</html>

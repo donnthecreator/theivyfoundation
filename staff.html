@@ -194,6 +194,25 @@ tr.detail td{background:#FAF9F5;padding:16px}
       </div>
     </div>
 
+    <div class="card hidden" id="gsCard">
+      <h2>God's Sons sign-ups</h2>
+      <p style="color:var(--muted);margin-top:-6px">Families who signed up through the invite link. Contact info for minors: keep it inside this page and your phone, never in group chats.</p>
+      <div class="row" style="align-items:end">
+        <div><label for="gsRef">Invite link for</label><input id="gsRef" maxlength="40" placeholder="Optional: a mentor or event name, like coach-mike"></div>
+        <div><button type="button" id="gsCopy">Copy invite link</button></div>
+      </div>
+      <p class="sub" id="gsLink" style="margin-top:6px"></p>
+      <div class="acts" style="margin:12px 0">
+        <select id="gsFilter"><option value="">All statuses</option><option value="new">New</option><option value="contacted">Contacted</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+        <button type="button" class="ghost" id="gsCsv">Download CSV</button>
+        <span class="sub" id="gsCount"></span>
+      </div>
+      <div class="wrapx"><table>
+        <thead><tr><th>Son</th><th>Parent</th><th>Details</th><th>Status</th></tr></thead>
+        <tbody id="gsRows"><tr><td colspan="4" style="color:var(--muted)">Loading...</td></tr></tbody>
+      </table></div>
+    </div>
+
     <div class="card hidden" id="grantCard">
       <h2>Grant calendar</h2>
       <p style="color:var(--muted);margin-top:-6px" id="gStamp">Updated every Monday morning.</p>
@@ -297,6 +316,7 @@ function setSignedIn(staff) {
   $("partnerCard").classList.toggle("hidden", !partner);
   $("staffCard").classList.toggle("hidden", !admin);
   $("grantCard").classList.toggle("hidden", !admin);
+  $("gsCard").classList.toggle("hidden", !admin);
   $("assignCard").classList.toggle("hidden", !admin);
   if (partner) loadPartner();
   else if (admin) refreshAdmin();
@@ -584,8 +604,71 @@ $("gGrid").onclick = (e) => {
   setTimeout(() => el.classList.remove("flash"), 1600);
 };
 
+let GS = [];
+const GS_SIZES = { YS: "Youth S", YM: "Youth M", YL: "Youth L", AS: "Adult S", AM: "Adult M", AL: "Adult L", AXL: "Adult XL", A2XL: "Adult 2XL", A3XL: "Adult 3XL" };
+function gsInvite() {
+  const ref = $("gsRef").value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  return location.origin + "/gs" + (ref ? "?ref=" + ref : "");
+}
+function gsShowLink() { $("gsLink").textContent = gsInvite(); }
+$("gsRef").oninput = gsShowLink;
+$("gsCopy").onclick = async () => {
+  const link = gsInvite();
+  try { await navigator.clipboard.writeText(link); say("Invite link copied. Paste it into a text or post.", "ok"); }
+  catch (e) { prompt("Copy this invite link:", link); }
+};
+async function loadGs() {
+  gsShowLink();
+  try { const d = await api("GET", "/gs/signups"); GS = d.signups; gsRender(); }
+  catch (err) { $("gsRows").innerHTML = `<tr><td colspan="4" style="color:var(--red)">${esc(err.message)}</td></tr>`; }
+}
+function gsRender() {
+  const f = $("gsFilter").value;
+  const list = GS.filter(g => !f || g.status === f);
+  $("gsCount").textContent = `${GS.length} signed up${GS.filter(g => g.status === "new").length ? `, ${GS.filter(g => g.status === "new").length} new` : ""}`;
+  $("gsRows").innerHTML = list.length ? list.map(g => {
+    const ints = Array.isArray(g.interests) ? g.interests : [];
+    const bits = [
+      g.kid_school ? `School: ${esc(g.kid_school)}` : "",
+      ints.length ? `Into: ${esc(ints.join(", "))}` : "",
+      g.favorite_team ? `Team: ${esc(g.favorite_team)}` : "",
+      g.shirt_size ? `Shirt: ${esc(GS_SIZES[g.shirt_size] || g.shirt_size)}` : "",
+      g.food_notes ? `Food: ${esc(g.food_notes)}` : "",
+      g.transport ? `Rides: ${esc(g.transport)}` : "",
+      g.goals ? `Notes: ${esc(g.goals)}` : "",
+      `Messages: ${g.consent_messages ? "yes" : "no"} · Photos: ${g.media_ok ? "yes" : "no"}${g.ref ? ` · Invited by: ${esc(g.ref)}` : ""}`
+    ].filter(Boolean).map(b => `<div>${b}</div>`).join("");
+    return `<tr>
+      <td><b>${esc(g.kid_first)} ${esc(g.kid_last)}</b><span class="sub">Age ${esc(g.kid_age)}${g.kid_grade ? `, ${esc(g.kid_grade)}` : ""}</span><span class="sub">${fmtDate(g.created_at)}</span></td>
+      <td>${esc(g.parent_name)} <span class="sub">${esc(g.parent_relation)}</span><span class="sub"><a href="tel:${esc(g.parent_phone.replace(/[^\d+]/g, ""))}">${esc(g.parent_phone)}</a> (prefers ${esc(g.contact_pref || "text")})</span>${g.parent_email ? `<span class="sub"><a href="mailto:${esc(g.parent_email)}">${esc(g.parent_email)}</a></span>` : ""}</td>
+      <td style="font-size:.88rem">${bits}</td>
+      <td><select data-gs="${esc(g.id)}" style="width:auto;padding:6px 8px">${["new","contacted","active","inactive"].map(s => `<option value="${s}" ${g.status === s ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></td>
+    </tr>`;
+  }).join("") : '<tr><td colspan="4" style="color:var(--muted)">No sign-ups yet. Copy the invite link above and send it to families.</td></tr>';
+}
+$("gsFilter").onchange = gsRender;
+$("gsRows").onchange = async (e) => {
+  const sel = e.target.closest("select[data-gs]");
+  if (!sel) return;
+  try {
+    await api("POST", "/gs/status", { id: sel.dataset.gs, status: sel.value });
+    const g = GS.find(x => x.id === sel.dataset.gs); if (g) g.status = sel.value;
+    gsRender();
+  } catch (err) { say(err.message); }
+};
+$("gsCsv").onclick = () => {
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const head = ["Signed up","Status","Son first","Son last","Age","Grade","School","Interests","Favorite team","Shirt","Food notes","Rides","Notes","Parent","Relation","Phone","Email","Prefers","Messages OK","Photos OK","Invited by"];
+  const rows = GS.map(g => [String(g.created_at).slice(0, 10), g.status, g.kid_first, g.kid_last, g.kid_age, g.kid_grade, g.kid_school, (g.interests || []).join("; "), g.favorite_team, GS_SIZES[g.shirt_size] || "", g.food_notes, g.transport, g.goals, g.parent_name, g.parent_relation, g.parent_phone, g.parent_email, g.contact_pref, g.consent_messages ? "yes" : "no", g.media_ok ? "yes" : "no", g.ref]);
+  const csv = [head, ...rows].map(r => r.map(q).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "gods-sons-signups.csv"; a.click();
+};
+
 async function refreshAdmin() {
   loadGrants();
+  loadGs();
   await loadYouth();
   await loadStaff();
   await loadAssignments();

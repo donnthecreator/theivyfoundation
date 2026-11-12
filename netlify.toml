@@ -20,6 +20,11 @@
   status = 200
 
 [[redirects]]
+  from = "/gs"
+  to = "/gs.html"
+  status = 200
+
+[[redirects]]
   from = "/admin"
   to = "/staff.html"
   status = 200

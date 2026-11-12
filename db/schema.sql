@@ -69,3 +69,30 @@ CREATE TABLE IF NOT EXISTS staff_youth (
   assigned_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (staff_id, youth_id)
 );
+
+-- God's Sons (GS) parent sign-ups from the public invite link (added 2026-11-11)
+CREATE TABLE IF NOT EXISTS gs_signups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_name text NOT NULL,
+  parent_relation text NOT NULL,
+  parent_phone text NOT NULL,
+  parent_email text,
+  contact_pref text,
+  kid_first text NOT NULL,
+  kid_last text NOT NULL,
+  kid_age int,
+  kid_grade text,
+  kid_school text,
+  shirt_size text,
+  interests jsonb NOT NULL DEFAULT '[]'::jsonb,
+  favorite_team text,
+  food_notes text,
+  transport text,
+  goals text,
+  consent_program boolean NOT NULL DEFAULT false,
+  consent_messages boolean NOT NULL DEFAULT false,
+  media_ok boolean NOT NULL DEFAULT false,
+  ref text,
+  status text NOT NULL DEFAULT 'new',
+  created_at timestamptz NOT NULL DEFAULT now()
+);

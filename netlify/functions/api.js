@@ -231,6 +231,38 @@ exports.handler = async (event) => {
       return json(200, { ok: true, status: y.status });
     }
 
+    /* ---------- God's Sons sign-up (public invite link) ---------- */
+    if (route === '/gs/signup' && method === 'POST') {
+      if (String(body.website || '').trim()) return json(201, { ok: true });
+      const t = (v, n) => String(v || '').trim().replace(/\s+/g, ' ').slice(0, n);
+      const pName = cleanName(body.parentName), pRel = t(body.parentRelation, 40), pPhone = validPhone(body.parentPhone);
+      const pEmail = t(body.parentEmail, 120).toLowerCase();
+      const kFirst = cleanName(body.kidFirst), kLast = cleanName(body.kidLast);
+      const age = Number(body.kidAge);
+      if (pName.length < 2) return json(400, { error: 'Type your full name.' });
+      if (!pRel) return json(400, { error: 'Choose how you are related to your son.' });
+      if (!pPhone) return json(400, { error: 'Type a phone number we can reach you at.' });
+      if (pEmail && !validEmail(pEmail)) return json(400, { error: 'Check the email address.' });
+      if (!kFirst || kLast.length < 2) return json(400, { error: "Type your son's first and last name." });
+      if (!Number.isInteger(age) || age < 6 || age > 19) return json(400, { error: "Choose your son's age." });
+      if (body.consentProgram !== true) return json(400, { error: 'Check the box giving permission for your son to join God\'s Sons.' });
+      const SIZES = ['YS', 'YM', 'YL', 'AS', 'AM', 'AL', 'AXL', 'A2XL', 'A3XL'];
+      const INTS = ['Football', 'Basketball', 'Baseball', 'Track', 'Soccer', 'Other sports', 'Music', 'Art', 'Tech and coding', 'Gaming', 'Cars', 'Cooking', 'Outdoors', 'Business', 'Church and faith'];
+      const interests = (Array.isArray(body.interests) ? body.interests : []).filter(i => INTS.includes(i));
+      const dup = await sql`SELECT id FROM gs_signups WHERE lower(kid_first) = lower(${kFirst}) AND lower(kid_last) = lower(${kLast}) AND parent_phone = ${pPhone} LIMIT 1`;
+      if (dup.length) return json(200, { ok: true, already: true });
+      const rows = await sql`INSERT INTO gs_signups (parent_name, parent_relation, parent_phone, parent_email, contact_pref, kid_first, kid_last, kid_age,
+          kid_grade, kid_school, shirt_size, interests, favorite_team, food_notes, transport, goals, consent_program, consent_messages, media_ok, ref)
+        VALUES (${pName}, ${pRel}, ${pPhone}, ${pEmail || null}, ${['text', 'call', 'email'].includes(body.contactPref) ? body.contactPref : 'text'},
+          ${kFirst}, ${kLast}, ${age}, ${t(body.kidGrade, 20) || null}, ${t(body.kidSchool, 80) || null},
+          ${SIZES.includes(body.shirtSize) ? body.shirtSize : null}, ${JSON.stringify(interests)}::jsonb, ${t(body.favoriteTeam, 80) || null},
+          ${t(body.foodNotes, 200) || null}, ${t(body.transport, 40) || null}, ${t(body.goals, 400) || null},
+          true, ${body.consentMessages === true}, ${body.mediaOk === true}, ${t(body.ref, 40) || null})
+        RETURNING id`;
+      await audit(null, 'gs_signup', rows[0].id);
+      return json(201, { ok: true });
+    }
+
     /* ---------- Guardian waiver (public, token-gated) ---------- */
     const wm = route.match(/^\/waiver\/([A-Za-z0-9_-]{20,64})$/);
     if (wm) {
@@ -257,6 +289,20 @@ exports.handler = async (event) => {
     if (!staff) return json(401, { error: 'Sign in first' });
 
     if (route === '/me' && method === 'GET') return json(200, { staff });
+
+    if (route === '/gs/signups' && method === 'GET') {
+      if (staff.role !== 'admin') return json(403, { error: "Only an admin can see God's Sons sign-ups" });
+      const rows = await sql`SELECT * FROM gs_signups ORDER BY created_at DESC LIMIT 1000`;
+      await audit(staff.id, 'view_gs_signups', String(rows.length));
+      return json(200, { signups: rows });
+    }
+
+    if (route === '/gs/status' && method === 'POST') {
+      if (staff.role !== 'admin') return json(403, { error: 'Only an admin can update sign-ups' });
+      if (!/^[0-9a-f-]{36}$/.test(String(body.id || '')) || !['new', 'contacted', 'active', 'inactive'].includes(body.status)) return json(400, { error: 'Invalid update' });
+      await sql`UPDATE gs_signups SET status = ${body.status} WHERE id = ${body.id}`;
+      return json(200, { ok: true });
+    }
 
     if (route === '/grants' && method === 'GET') {
       if (staff.role !== 'admin') return json(403, { error: 'Only an admin can see the grant calendar' });
