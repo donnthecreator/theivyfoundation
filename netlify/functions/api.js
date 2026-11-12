@@ -76,7 +76,17 @@ exports.handler = async (event) => {
     try {
       await sql`SELECT 1 AS ok`;
       await ensureSchema();
-      return json(200, { ok: true, database: 'connected' });
+      const staffCount = (await sql`SELECT count(*)::int AS n FROM staff`)[0].n;
+      const sc = process.env.SETUP_CODE || '';
+      return json(200, {
+        ok: true,
+        database: 'connected',
+        staffAccounts: staffCount,
+        setupCodeSet: sc.length > 0,
+        setupCodeLength: sc.length,
+        setupCodeHasWhitespace: /\s/.test(sc),
+        sessionSecretSet: Boolean(process.env.STAFF_SESSION_SECRET)
+      });
     } catch (err) {
       return json(500, { ok: false, errorName: err.name, code: err.code || null, message: String(err.message || '').slice(0, 300) });
     }
@@ -91,7 +101,8 @@ exports.handler = async (event) => {
     if (route === '/setup' && method === 'POST') {
       const count = (await sql`SELECT count(*)::int AS n FROM staff`)[0].n;
       if (count > 0) return json(404, { error: 'Not found' });
-      if (!process.env.SETUP_CODE || body.setupCode !== process.env.SETUP_CODE) return json(403, { error: 'Setup code is wrong' });
+      if (!process.env.SETUP_CODE) return json(403, { error: 'SETUP_CODE is not set on the server. Add it in Netlify and redeploy.' });
+      if (String(body.setupCode || '').trim() !== process.env.SETUP_CODE.trim()) return json(403, { error: 'Setup code is wrong' });
       if (!body.email || !body.name || !body.password || body.password.length < 12) return json(400, { error: 'Name, email, and a password of at least 12 characters are required' });
       const rows = await sql`INSERT INTO staff (email, name, pass_hash, role) VALUES (${body.email.toLowerCase()}, ${body.name}, ${hashSecret(body.password)}, 'admin') RETURNING id, email, name, role`;
       await audit(rows[0].id, 'setup_admin', rows[0].email);
