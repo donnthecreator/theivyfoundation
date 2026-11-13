@@ -96,3 +96,6 @@ CREATE TABLE IF NOT EXISTS gs_signups (
   status text NOT NULL DEFAULT 'new',
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Admin-viewable PIN, encrypted at rest (added 2026-11-13)
+ALTER TABLE youth ADD COLUMN IF NOT EXISTS pin_enc text;

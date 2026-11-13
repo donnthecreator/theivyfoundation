@@ -399,6 +399,7 @@ function renderYouth() {
           <button class="ghost" data-act="visit">Log visit</button>
           ${y.status === "pending" ? '<button class="ghost" data-act="link">Copy waiver link</button>' : ""}
           ${y.status === "pending" && admin ? '<button class="ghost" data-act="paper">Paper waiver on file</button>' : ""}
+          ${me && me.role === "admin" ? '<button class="ghost" data-act="showpin">Show PIN</button>' : ""}
           <button class="ghost" data-act="pin">Reset PIN</button>
           ${admin ? '<button class="danger" data-act="delete">Delete</button>' : ""}
         </div>
@@ -458,6 +459,13 @@ $("rows").onclick = async (e) => {
       await api("POST", `/youth/${id}/paper-waiver`, { signerName: signer.trim(), relation: relation.trim() });
       say("Paper waiver recorded. Keep the signed form on file.", "ok");
       await loadYouth(); return;
+    }
+    if (act === "showpin") {
+      const d = await api("GET", `/youth/${id}/pin`);
+      const name = row.querySelector("b").textContent;
+      if (d.pin) say(`${name}'s PIN is ${d.pin}. This view was logged.`, "ok");
+      else say(d.message);
+      return;
     }
     if (act === "pin") {
       const pin = prompt("New 4-digit PIN for this student:", "");

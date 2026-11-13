@@ -38,6 +38,24 @@ function checkSecret(secret, stored) {
   const want = Buffer.from(hash, 'hex');
   return want.length === test.length && crypto.timingSafeEqual(want, test);
 }
+function pinKey() {
+  return crypto.createHash('sha256').update('ivy-pin-v1:' + String(process.env.STAFF_SESSION_SECRET)).digest();
+}
+function encPin(pin) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', pinKey(), iv);
+  const ct = Buffer.concat([c.update(String(pin), 'utf8'), c.final()]);
+  return `v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`;
+}
+function decPin(stored) {
+  try {
+    const [v, iv, tag, ct] = String(stored || '').split('.');
+    if (v !== 'v1') return null;
+    const d = crypto.createDecipheriv('aes-256-gcm', pinKey(), Buffer.from(iv, 'base64url'));
+    d.setAuthTag(Buffer.from(tag, 'base64url'));
+    return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8');
+  } catch { return null; }
+}
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 
 function sign(payload) {
@@ -183,8 +201,8 @@ exports.handler = async (event) => {
       if (dup.length) return json(409, { error: "You're already signed up. Sign in with your PIN instead." });
       const w = newWaiverToken();
       const rows = await sql`
-        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, guardian_email, guardian_phone, status, waiver_token_hash, intake)
-        VALUES (${first}, ${last}, ${site}, ${hashSecret(pin)}, false, ${gEmail}, ${gPhone}, 'pending', ${w.hash}, ${JSON.stringify({ age })}::jsonb)
+        INSERT INTO youth (first_name, last_name, site, pin_hash, pin_enc, consent_on_file, guardian_email, guardian_phone, status, waiver_token_hash, intake)
+        VALUES (${first}, ${last}, ${site}, ${hashSecret(pin)}, ${encPin(pin)}, false, ${gEmail}, ${gPhone}, 'pending', ${w.hash}, ${JSON.stringify({ age })}::jsonb)
         RETURNING id, first_name, last_name, site, status`;
       const y = rows[0];
       await audit(null, 'student_signup', y.id);
@@ -412,8 +430,8 @@ exports.handler = async (event) => {
       if (!age) return json(400, { error: 'Pick the youth age (13 to 19).' });
       if (!gPhone) return json(400, { error: "Type the guardian's phone number." });
       const rows = await sql`
-        INSERT INTO youth (first_name, last_name, site, pin_hash, consent_on_file, consent_date, guardian_name, guardian_relation, guardian_phone, guardian_email, status, waiver_method, interests, intake)
-        VALUES (${cleanName(body.firstName)}, ${cleanName(body.lastName)}, ${body.site}, ${hashSecret(body.pin)}, true, ${body.consentDate || new Date().toISOString().slice(0, 10)},
+        INSERT INTO youth (first_name, last_name, site, pin_hash, pin_enc, consent_on_file, consent_date, guardian_name, guardian_relation, guardian_phone, guardian_email, status, waiver_method, interests, intake)
+        VALUES (${cleanName(body.firstName)}, ${cleanName(body.lastName)}, ${body.site}, ${hashSecret(body.pin)}, ${encPin(body.pin)}, true, ${body.consentDate || new Date().toISOString().slice(0, 10)},
                 ${body.guardianName}, ${body.guardianRelation}, ${gPhone}, ${body.guardianEmail || null}, 'active', 'paper',
                 ${JSON.stringify(body.interests || [])}::jsonb, ${JSON.stringify({ ...(body.intake || {}), age })}::jsonb)
         RETURNING id, first_name, last_name, site, status, consent_on_file, consent_date`;
@@ -482,9 +500,18 @@ exports.handler = async (event) => {
         await audit(staff.id, 'paper_waiver', id);
         return json(200, { ok: true });
       }
+      if (action === '/pin' && method === 'GET') {
+        if (staff.role !== 'admin') return json(403, { error: 'Only an admin can view PINs' });
+        const rows = await sql`SELECT pin_enc FROM youth WHERE id = ${id}`;
+        if (!rows.length) return json(404, { error: 'Not found' });
+        await audit(staff.id, 'view_pin', id);
+        const pin = decPin(rows[0].pin_enc);
+        if (!pin) return json(200, { pin: null, message: 'This account was made before PINs could be viewed, so there is no PIN to show. Use Reset PIN to set a new one, and it will be viewable after that.' });
+        return json(200, { pin });
+      }
       if (action === '/reset-pin' && method === 'POST') {
         if (!/^\d{4}$/.test(String(body.pin || ''))) return json(400, { error: 'PIN must be 4 digits' });
-        await sql`UPDATE youth SET pin_hash = ${hashSecret(body.pin)}, failed_logins = 0, locked_until = NULL WHERE id = ${id}`;
+        await sql`UPDATE youth SET pin_hash = ${hashSecret(body.pin)}, pin_enc = ${encPin(body.pin)}, failed_logins = 0, locked_until = NULL WHERE id = ${id}`;
         await audit(staff.id, 'reset_pin', id);
         return json(200, { ok: true });
       }
