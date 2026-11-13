@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>450 Bikes: Alabama Riding Land Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3eee4;--card:#fffdf8;--ink:#1c1e19;--muted:#6b685e;--line:#e0d6c4;--green:#21402e;--green2:#2f5a40;--orange:#e5602a;--orange2:#c94d1c;--sand:#e9dfcb;--blue:#7fa6c4}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+h1,h2,h3,.cond{font-family:"Barlow Condensed",sans-serif;letter-spacing:.2px}
+button{font:inherit;cursor:pointer}
+header{display:flex;align-items:center;gap:20px;padding:12px 20px;background:var(--green);color:#fff;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.brand b{font-family:"Barlow Condensed";font-size:26px;font-weight:800;letter-spacing:.5px}
+.brand small{display:block;font-size:11px;opacity:.75;margin-top:-4px}
+nav{display:flex;gap:4px;margin-left:auto;background:rgba(255,255,255,.08);padding:4px;border-radius:10px}
+nav button{background:none;border:0;color:#dfe8e1;padding:7px 14px;border-radius:7px;font-weight:600;font-size:13px}
+nav button.on{background:#fff;color:var(--green)}
+.demo{font-size:11px;background:var(--orange);color:#fff;padding:3px 8px;border-radius:20px;font-weight:600}
+.view{display:none}.view.on{display:block}
+#find.on{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 62px)}
+.mapwrap{position:relative;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.chip{border:1px solid var(--line);background:#fff;padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:500;color:var(--ink)}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+select,input[type=text],input[type=number]{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;color:var(--ink)}
+.price{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.price input{accent-color:var(--orange);width:90px}
+#map{flex:1;min-height:0;width:100%;touch-action:none;cursor:grab;background:radial-gradient(circle at 40% 30%,#e3ecef,#cfdde4)}
+#map.drag{cursor:grabbing}
+.zoom{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:18px;font-weight:700;color:var(--green);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.legend{position:absolute;left:14px;bottom:14px;background:rgba(255,253,248,.95);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:11.5px;color:var(--muted);max-width:230px}
+.legend b{color:var(--ink)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:6px 9px;border-radius:7px;font-size:12px;white-space:nowrap;transform:translate(-50%,-130%);display:none;z-index:5}
+.side{overflow-y:auto;background:var(--bg);min-height:0}
+.sidehead{position:sticky;top:0;background:var(--bg);padding:14px 16px 8px;z-index:2}
+.sidehead h2{font-size:24px}
+.sidehead p{color:var(--muted);font-size:12.5px}
+.search{width:100%;margin-top:8px}
+.list{padding:4px 16px 20px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;transition:.15s;display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:center}
+.card:hover,.card.hl{border-color:var(--orange);box-shadow:0 4px 14px rgba(229,96,42,.13)}
+.thumb{width:62px;height:62px;border-radius:9px;overflow:hidden;background:var(--sand)}
+.card h3{font-size:18px;line-height:1.1}
+.meta{font-size:12px;color:var(--muted)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.tag{font-size:10.5px;background:var(--sand);padding:2px 7px;border-radius:10px;font-weight:600;color:#5a4f3a}
+.tag.k{background:#dcebdc;color:var(--green)}
+.tag.m{background:#fde3d6;color:var(--orange2)}
+.addons{display:flex;flex-direction:column;gap:6px}
+.addon{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
+.addon.on{border-color:var(--orange);background:#fff7f2}
+.addon input{accent-color:var(--orange)}
+.addon b{display:block;font-size:13px}
+.addon span{font-size:11.5px;color:var(--muted)}
+.addon em{font-style:normal;font-weight:700;color:var(--orange2);text-align:right;font-size:14px}
+.addon em small{display:block;font-weight:500;font-size:10px;color:var(--muted)}
+.pp{text-align:right}
+.pp b{font-family:"Barlow Condensed";font-size:24px;color:var(--orange2)}
+.pp span{display:block;font-size:10.5px;color:var(--muted);margin-top:-3px}
+.empty{padding:30px 10px;text-align:center;color:var(--muted)}
+.detail{padding:14px 16px 24px}
+.back{background:none;border:0;color:var(--green2);font-weight:600;margin-bottom:8px}
+.detail h2{font-size:30px;line-height:1}
+.trailbox{background:#fff;border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
+.trailbox .cap{display:flex;justify-content:space-between;padding:7px 12px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.fact b{font-family:"Barlow Condensed";font-size:21px;display:block;line-height:1.1}
+.fact span{font-size:11px;color:var(--muted)}
+.sec{margin-top:14px}
+.sec h4{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+.sec ul{padding-left:18px}
+.sec li{margin:2px 0}
+.btn{background:var(--orange);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:700;font-size:15px;width:100%}
+.btn:hover{background:var(--orange2)}
+.btn:disabled{background:#c9bfae;cursor:not-allowed}
+.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--line)}
+.sticky{position:sticky;bottom:0;padding-top:12px;background:linear-gradient(transparent,var(--bg) 30%)}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(20,22,18,.55);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.ov.on{display:flex}
+.modal{background:var(--card);width:min(540px,100%);max-height:92vh;overflow-y:auto;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.mhead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:2}
+.mhead h3{font-size:22px}
+.x{background:none;border:0;font-size:22px;color:var(--muted)}
+.steps{display:flex;gap:6px;padding:12px 20px 0}
+.steps div{flex:1;height:4px;border-radius:3px;background:var(--line)}
+.steps div.on{background:var(--orange)}
+.mbody{padding:16px 20px 20px}
+.mbody h4{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 0 8px}
+.mbody h4:first-child{margin-top:0}
+.dates{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.date{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 0;text-align:center}
+.date b{display:block;font-family:"Barlow Condensed";font-size:20px;line-height:1}
+.date span{font-size:10.5px;color:var(--muted)}
+.date.on{background:var(--green);color:#fff;border-color:var(--green)}
+.date.on span{color:#cfe0d4}
+.stepper{display:flex;align-items:center;gap:12px}
+.stepper button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;font-weight:700}
+.stepper b{font-family:"Barlow Condensed";font-size:26px;min-width:30px;text-align:center}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.row input[type=text]{flex:1}
+.row label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.waiver{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;color:#4a483f;max-height:150px;overflow-y:auto}
+.waiver p{margin-bottom:6px}
+.check{display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-size:13px}
+.check input{margin-top:3px;accent-color:var(--green)}
+.sig{width:100%;font-family:"Barlow Condensed",cursive;font-size:22px;font-style:italic}
+.sum{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.sum div{display:flex;justify-content:space-between;padding:4px 0}
+.sum .tot{border-top:1px solid var(--line);margin-top:6px;padding-top:9px;font-weight:700;font-size:16px}
+.fake{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}
+.fake input{width:100%}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px}
+.navbtns{display:flex;gap:8px;margin-top:18px}
+.navbtns .btn.ghost{width:auto}
+.conf{text-align:center}
+.conf .big{font-family:"Barlow Condensed";font-size:52px;letter-spacing:8px;color:var(--green);line-height:1;margin:6px 0}
+.conf .ok{width:56px;height:56px;border-radius:50%;background:#dcebdc;display:flex;align-items:center;justify-content:center;margin:4px auto 10px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;text-align:left}
+.err{color:var(--orange2);font-size:12px;margin-top:6px;min-height:16px}
+/* owner + biz */
+.page{max-width:1080px;margin:0 auto;padding:28px 20px 60px}
+.page h1{font-size:44px;line-height:1}
+.lede{color:var(--muted);font-size:16px;max-width:680px;margin:8px 0 22px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.panel h3{font-size:22px;margin-bottom:8px}
+.panel p,.panel li{color:#3f3d36}
+.panel ul,.panel ol{padding-left:18px}
+.panel li{margin:5px 0}
+.calc label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+.calc input[type=range]{width:100%;accent-color:var(--orange)}
+.calc .v{float:right;color:var(--ink);font-weight:700}
+.out{background:var(--green);color:#fff;border-radius:14px;padding:20px}
+.out .lab{font-size:12px;opacity:.75;text-transform:uppercase;letter-spacing:1px}
+.out .num{font-family:"Barlow Condensed";font-size:56px;font-weight:800;line-height:1;margin:4px 0 12px}
+.out .ln{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid rgba(255,255,255,.15);font-size:13.5px}
+.stat b{font-family:"Barlow Condensed";font-size:34px;color:var(--orange2);display:block;line-height:1}
+.stat span{font-size:12px;color:var(--muted)}
+.phase{border-left:3px solid var(--orange);padding-left:12px;margin:12px 0}
+.phase b{font-family:"Barlow Condensed";font-size:18px}
+@media(max-width:900px){
+  #find.on{grid-template-columns:1fr;height:auto}
+  .mapwrap{height:62vh;border-right:0;border-bottom:1px solid var(--line)}
+  .side{overflow:visible}
+  .g2,.g3{grid-template-columns:1fr}
+  nav{margin-left:0;width:100%}
+  nav button{flex:1;padding:7px 6px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34"><rect width="34" height="34" rx="8" fill="#e5602a"/><path d="M7 24V12h3v12M24 24V12h3v12M10 15h14M10 20h14" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <div><b>450 BIKES</b><small>Private land. Legal riding. Booked in a minute.</small></div>
+  </div>
+  <span class="demo">Demo · sample listings</span>
+  <nav>
+    <button class="on" data-v="find">Find land</button>
+    <button data-v="owner">List your land</button>
+    <button data-v="biz">Business model</button>
+  </nav>
+</header>
+
+<section id="find" class="view on">
+  <div class="mapwrap">
+    <div class="filters" id="filters"></div>
+    <svg id="map" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="tip" id="tip"></div>
+    <div class="legend"><b>Alabama riding land</b><br>Pins are geotagged to each property's gate. Drag to pan, scroll or use + / − to zoom. Click a pin to view and book. A wrench badge means a mechanic is on site for repairs.</div>
+    <div class="zoom"><button id="zin" title="Zoom in">+</button><button id="zout" title="Zoom out">−</button><button id="zreset" title="Reset" style="font-size:13px">AL</button></div>
+  </div>
+  <aside class="side" id="side"></aside>
+</section>
+
+<section id="owner" class="view">
+  <div class="page">
+    <h1>Turn your back 40 into income.</h1>
+    <p class="lede">Landowners set the rules, the price and the days. 450 Bikes handles bookings, payments, signed waivers and rider check-in. You just open the gate.</p>
+    <div class="g2">
+      <div class="panel calc">
+        <h3>Earnings calculator</h3>
+        <label>Price per rider, per day <span class="v" id="o_p_v"></span></label>
+        <input type="range" id="o_p" min="15" max="75" step="5" value="35">
+        <label>Average riders per open day <span class="v" id="o_r_v"></span></label>
+        <input type="range" id="o_r" min="2" max="40" value="10">
+        <label>Open days per month <span class="v" id="o_d_v"></span></label>
+        <input type="range" id="o_d" min="2" max="30" value="8">
+        <label>Months open per year <span class="v" id="o_m_v"></span></label>
+        <input type="range" id="o_m" min="3" max="12" value="10">
+      </div>
+      <div class="out">
+        <div class="lab">Your estimated payout per month</div>
+        <div class="num" id="o_out">$0</div>
+        <div class="ln"><span>Gross rider fees</span><span id="o_g"></span></div>
+        <div class="ln"><span>450 Bikes fee (15%)</span><span id="o_f"></span></div>
+        <div class="ln"><span>Your payout per year</span><span id="o_y"></span></div>
+        <p style="font-size:12px;opacity:.75;margin-top:12px">Paid out by direct deposit two days after each ride day. Riders pay the booking fee, not you.</p>
+      </div>
+    </div>
+    <div class="g3" style="margin-top:18px">
+      <div class="panel"><h3>1. Verify and pin</h3><p>Confirm ownership, drop a pin on your gate, and trace your trails on the map. Riders never see your home address until they book.</p></div>
+      <div class="panel"><h3>2. Set your rules</h3><p>Max riders per day, open days, quiet hours, spark arrestor rules, kids allowed or not. Block dates anytime. Auto-close when it rains.</p></div>
+      <div class="panel"><h3>3. Get covered</h3><p>Every rider e-signs your waiver before they get the gate code. Bookings include an event liability policy option through our insurance partner.</p></div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h3>🔧 Add a mechanic, earn more per rider</h3>
+      <p>Host a 450 Bikes mechanic at your pits on ride days, or bring your own. Riders add repair services when they book: safety checks, flat coverage, trailside recovery, chain service, washes and tool rental. Properties with a mechanic show a wrench badge on the map and can be found with the "Mechanic on site" filter.</p>
+      <p style="margin-top:8px"><b>The split on repair add-ons:</b> 80% to the mechanic, 20% to 450 Bikes. If you're the mechanic, the 80% is yours on top of your ride fees.</p>
+    </div>
+  </div>
+</section>
+
+<section id="biz" class="view">
+  <div class="page">
+    <h1>450 Bikes business model</h1>
+    <p class="lede">The hardest part of owning a dirt bike is finding somewhere legal to ride. Alabama has a lot of private land, and plenty of it is sitting unused. 450 Bikes connects the two.</p>
+    <div class="g3">
+      <div class="panel stat"><b>15%</b><span>Commission on each booking, paid by the landowner</span></div>
+      <div class="panel stat"><b>$3</b><span>Booking fee per rider, paid by the rider</span></div>
+      <div class="panel stat"><b>$24.75</b><span>Platform revenue on a typical 3-rider, $35 booking</span></div>
+    </div>
+    <div class="g2" style="margin-top:18px">
+      <div class="panel">
+        <h3>How it makes money</h3>
+        <ul>
+          <li><b>Booking commission:</b> 15% of rider fees.</li>
+          <li><b>Rider booking fee:</b> $3 per rider per day.</li>
+          <li><b>450 Bikes Pro ($9.99/mo):</b> no booking fees, early access to new land, offline GPS trail maps.</li>
+          <li><b>Repair upcharges:</b> riders add safety checks, flat coverage, trailside recovery, chain service, washes and tool rental at checkout. 450 Bikes keeps 20% and the mechanic gets 80%.</li>
+          <li><b>Insurance referral:</b> commission from the liability insurance partner on each policy.</li>
+          <li><b>Later:</b> group events, private race days, local shop ads.</li>
+        </ul>
+        <p style="margin-top:10px"><b>Example:</b> 400 bookings a month at $24.75 is about <b>$9,900 a month</b> in platform revenue. If 1 in 3 bookings adds $60 in repairs, that's another <b>$1,600 a month</b> for 450 Bikes and <b>$6,400</b> for mechanics.</p>
+      </div>
+      <div class="panel">
+        <h3>Launch plan</h3>
+        <div class="phase"><b>Phase 1 · Tuscaloosa base (months 0 to 3)</b><br>Sign 8 to 10 landowners within 90 minutes. Ride every property first. Recruit riders through local shops and Facebook riding groups.</div>
+        <div class="phase"><b>Phase 2 · Statewide (months 4 to 12)</b><br>Huntsville, Birmingham, Wiregrass and Mobile. Goal: 40 properties and 1,500 riders.</div>
+        <div class="phase"><b>Phase 3 · Southeast</b><br>Mississippi, Georgia and Tennessee, using the same playbook.</div>
+      </div>
+      <div class="panel">
+        <h3>Features in this demo</h3>
+        <ul>
+          <li>Geotagged map with filters for terrain, skill level, price, kids and camping</li>
+          <li>Generated trail map for each property</li>
+          <li>Bike repair upcharges at checkout, a wrench badge for properties with a mechanic, and a "Mechanic on site" filter</li>
+          <li>Booking flow: date, riders, e-signed waiver (with guardian signature for minors), checkout</li>
+          <li>Gate code and GPS entry point after booking</li>
+          <li>Landowner earnings calculator</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Real risks to solve first</h3>
+        <ul>
+          <li><b>Liability.</b> Alabama has recreational use laws that limit landowner liability, but charging a fee can change that protection. Talk to an attorney and an insurance agent before launch.</li>
+          <li><b>Landowner trust.</b> Rider ratings, damage deposits and ID verification.</li>
+          <li><b>Weather.</b> Rain closes trails. Auto-cancel and refund when the owner closes for weather.</li>
+          <li><b>Neighbors and noise.</b> Quiet hours and sound limits are part of every listing.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+
+<script>
+const LISTINGS=[
+{id:1,name:"Black Warrior Ridge",town:"Northport",lat:33.37,lon:-87.64,acres:140,miles:9,price:35,terrain:["Woods trails","Hill climbs"],skill:"All levels",kids:true,camping:true,owner:"Marcus",max:12,open:[5,6,0],amen:["Trailer parking","Water spigot","Primitive camping","Wash station"],desc:"Rolling ridge land off the Black Warrior with flowy woods loops and two marked hill climbs. There's a separate kids loop beside the parking field."},
+{id:2,name:"Sipsey Hollow Trails",town:"Double Springs",lat:34.13,lon:-87.39,acres:320,miles:18,price:40,terrain:["Woods trails","Enduro","Mud & creeks"],skill:"Advanced",kids:false,camping:true,owner:"Dale",max:15,open:[6,0],amen:["Trailer parking","Primitive camping","Porta-john"],desc:"Tight, rooty singletrack along the hollows, with rock ledges and three creek crossings. Not for beginners."},
+{id:3,name:"Sand Mountain MX Pasture",town:"Henagar",lat:34.62,lon:-85.78,acres:85,miles:3,price:30,terrain:["MX track","Hill climbs"],skill:"Intermediate",kids:true,camping:false,owner:"Tommy",max:20,open:[3,6,0],amen:["Trailer parking","Water spigot","Shade pavilion"],desc:"A groomed red-clay MX track with tabletops and a rhythm section on top of Sand Mountain. The track is watered on ride days."},
+{id:4,name:"Wiregrass Sand Pits",town:"Headland",lat:31.38,lon:-85.39,acres:60,miles:4,price:25,terrain:["Sand"],skill:"Beginner",kids:true,camping:false,owner:"Kenya",max:12,open:[5,6,0],amen:["Trailer parking","Restrooms"],desc:"Old borrow pits turned into soft sand bowls and wide open loops. A forgiving place for new riders and kids on pit bikes."},
+{id:5,name:"Talladega Foothills",town:"Lineville",lat:33.32,lon:-85.79,acres:210,miles:14,price:45,terrain:["Enduro","Hill climbs","Woods trails"],skill:"Advanced",kids:false,camping:true,owner:"Russ",max:10,open:[6,0],amen:["Trailer parking","Primitive camping","Fire ring"],desc:"Steep, rocky foothill terrain bordering national forest land. Long climbs, technical descents and big views."},
+{id:6,name:"Cahaba Clay Track",town:"Centreville",lat:32.96,lon:-87.12,acres:95,miles:5,price:30,terrain:["MX track","Woods trails"],skill:"All levels",kids:true,camping:true,owner:"Andre",max:18,open:[4,5,6,0],amen:["Trailer parking","Water spigot","Camping w/ power","Kids track"],desc:"A family-run property with a full MX track, a 50cc and 65cc kids track, and a short woods loop for warming up."},
+{id:7,name:"Bankhead Edge",town:"Jasper",lat:33.86,lon:-87.31,acres:180,miles:12,price:35,terrain:["Woods trails","Mud & creeks"],skill:"Intermediate",kids:false,camping:true,owner:"Wes",max:12,open:[5,6,0],amen:["Trailer parking","Primitive camping"],desc:"Pine and hardwood trails near the Bankhead, with a mud bog and a sandstone creek crossing."},
+{id:8,name:"Conecuh Pines",town:"Brewton",lat:31.17,lon:-87.06,acres:400,miles:22,price:30,terrain:["Woods trails","Sand"],skill:"All levels",kids:true,camping:true,owner:"Lena",max:25,open:[0,1,2,3,4,5,6],amen:["Trailer parking","Camping w/ power","Restrooms","Wash station"],desc:"Big timber property with wide sandy fire roads and marked loops for beginner, intermediate and advanced riders. Open daily."},
+{id:9,name:"Tennessee Valley Ridge",town:"Athens",lat:34.86,lon:-86.97,acres:110,miles:7,price:35,terrain:["Woods trails","MX track"],skill:"Intermediate",kids:true,camping:false,owner:"Grant",max:14,open:[6,0],amen:["Trailer parking","Water spigot"],desc:"Farm ground with a practice MX loop on the pasture and wooded ridge trails behind it. Twenty minutes from Huntsville."},
+{id:10,name:"Black Belt Bottoms",town:"Demopolis",lat:32.52,lon:-87.86,acres:250,miles:11,price:30,terrain:["Mud & creeks","Woods trails"],skill:"Intermediate",kids:false,camping:true,owner:"Curtis",max:15,open:[5,6,0],amen:["Trailer parking","Primitive camping","Hose station"],desc:"River bottom land with chalk banks, creek beds and mud. Closes after heavy rain. Check the status before you haul."},
+{id:11,name:"Lake Martin Hills",town:"Alexander City",lat:32.98,lon:-85.93,acres:130,miles:8,price:40,terrain:["Woods trails","Hill climbs"],skill:"All levels",kids:true,camping:true,owner:"Bryce",max:10,open:[5,6,0],amen:["Trailer parking","Camping w/ power","Restrooms"],desc:"Rolling hardwood hills ten minutes from Lake Martin. Ride in the morning and spend the afternoon at the lake."},
+{id:12,name:"Citronelle Delta Trails",town:"Citronelle",lat:31.12,lon:-88.22,acres:175,miles:10,price:30,terrain:["Sand","Woods trails","Mud & creeks"],skill:"Beginner",kids:true,camping:false,owner:"Renee",max:16,open:[6,0],amen:["Trailer parking","Water spigot","Shade pavilion"],desc:"Sandy pine flats and easy creek crossings north of Mobile. A good first trail ride for new riders."}
+];
+const MECH=new Set([1,2,3,6,8,11,12]);
+LISTINGS.forEach(l=>l.mech=MECH.has(l.id));
+const ADDONS=[
+{id:"check",name:"Pre-ride safety check",desc:"Mechanic checks brakes, chain, tires, bolts and fluids before you ride",price:20,per:"bike",mech:true},
+{id:"flat",name:"Flat tire coverage",desc:"Any flat during your ride day gets fixed at the pits, tube included",price:15,per:"bike",mech:true},
+{id:"standby",name:"Trailside recovery & repair",desc:"Break down on the trail? The mechanic comes to you with tools and a tow strap",price:40,per:"group",mech:true},
+{id:"chain",name:"Chain & sprocket service",desc:"Clean, adjust and lube, or swap a worn set (parts billed at cost)",price:35,per:"bike",mech:true},
+{id:"wash",name:"Pressure wash & lube",desc:"Bikes washed, chains lubed and ready for the trailer at the end of the day",price:15,per:"bike",mech:false},
+{id:"tools",name:"Tool & stand rental",desc:"Full metric tool kit, bike stand and air compressor at the pits",price:10,per:"group",mech:false}
+];
+const TERR=["Woods trails","MX track","Hill climbs","Sand","Mud & creeks","Enduro"];
+const CITIES=[["Huntsville",34.73,-86.59],["Birmingham",33.52,-86.81],["Tuscaloosa",33.21,-87.57],["Montgomery",32.37,-86.30],["Mobile",30.69,-88.04],["Dothan",31.22,-85.39],["Gadsden",34.01,-86.01],["Auburn",32.61,-85.48],["Florence",34.80,-87.68],["Selma",32.41,-87.02]];
+const AL=[[35.0,-88.20],[34.99,-85.605],[34.4,-85.48],[33.8,-85.37],[33.2,-85.26],[32.86,-85.18],[32.6,-85.08],[32.3,-84.99],[32.0,-85.05],[31.6,-85.12],[31.3,-85.09],[31.0,-85.00],[31.0,-87.60],[30.75,-87.48],[30.5,-87.40],[30.28,-87.52],[30.25,-87.75],[30.23,-87.95],[30.42,-87.90],[30.62,-87.92],[30.68,-88.03],[30.50,-88.08],[30.35,-88.13],[30.36,-88.40],[30.6,-88.41],[31.0,-88.43],[31.9,-88.47],[32.5,-88.42],[33.3,-88.27],[34.0,-88.17],[34.9,-88.10]];
+const TNR=[[34.95,-85.71],[34.66,-86.02],[34.36,-86.29],[34.48,-86.62],[34.61,-86.98],[34.70,-87.30],[34.79,-87.68],[34.85,-87.95],[34.92,-88.10]];
+const proj=(lat,lon)=>[(lon+88.75)*101.04,(35.15-lat)*120];
+const FULL={x:-20,y:-20,w:444,h:652};
+let view={...FULL};
+const st={terr:new Set(),skill:"Any",maxP:60,kids:false,camp:false,mech:false,q:"",sel:null};
+const $=s=>document.querySelector(s);
+const svg=$("#map"),NS="http://www.w3.org/2000/svg";
+const money=n=>"$"+Math.round(n).toLocaleString();
+
+/* ---------- tabs ---------- */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id===b.dataset.v));
+});
+
+/* ---------- filters ---------- */
+function renderFilters(){
+  const f=$("#filters");
+  f.innerHTML=TERR.map(t=>`<button class="chip ${st.terr.has(t)?"on":""}" data-t="${t}">${t}</button>`).join("")+
+  `<span class="sep"></span><select id="fs"><option>Any</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>All levels</option></select>
+  <button class="chip ${st.kids?"on":""}" id="fk">Kid friendly</button><button class="chip ${st.camp?"on":""}" id="fc">Camping</button><button class="chip ${st.mech?"on":""}" id="fm">🔧 Mechanic on site</button>
+  <span class="price">Max <b id="pv">$${st.maxP}</b><input type="range" id="fp" min="20" max="60" step="5" value="${st.maxP}"></span>`;
+  $("#fs").value=st.skill;
+  f.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{st.terr.has(b.dataset.t)?st.terr.delete(b.dataset.t):st.terr.add(b.dataset.t);renderFilters();update()});
+  $("#fs").onchange=e=>{st.skill=e.target.value;update()};
+  $("#fk").onclick=()=>{st.kids=!st.kids;renderFilters();update()};
+  $("#fc").onclick=()=>{st.camp=!st.camp;renderFilters();update()};
+  $("#fm").onclick=()=>{st.mech=!st.mech;renderFilters();update()};
+  $("#fp").oninput=e=>{st.maxP=+e.target.value;$("#pv").textContent="$"+st.maxP;update()};
+}
+function filtered(){
+  return LISTINGS.filter(l=>
+    (!st.terr.size||[...st.terr].some(t=>l.terrain.includes(t)))&&
+    (st.skill==="Any"||l.skill===st.skill||(l.skill==="All levels"&&st.skill!=="All levels"))&&
+    l.price<=st.maxP&&(!st.kids||l.kids)&&(!st.camp||l.camping)&&(!st.mech||l.mech)&&
+    (!st.q||(l.name+" "+l.town).toLowerCase().includes(st.q.toLowerCase())));
+}
+
+/* ---------- map ---------- */
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+let gPins,gLabels;
+function drawBase(){
+  svg.innerHTML="";
+  const defs=el("defs",{},svg);
+  const pat=el("pattern",{id:"hatch",width:"8",height:"8",patternUnits:"userSpaceOnUse"},defs);
+  el("path",{d:"M0 8L8 0",stroke:"#d6cbb2",strokeWidth:"0.6","stroke-width":"0.6"},pat);
+  const shadow=el("filter",{id:"sh",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feDropShadow",{dx:"0",dy:"1.5",stdDeviation:"1.5","flood-opacity":".3"},shadow);
+  const d="M"+AL.map(p=>proj(...p).map(v=>v.toFixed(1)).join(",")).join("L")+"Z";
+  el("path",{d,fill:"#efe7d6",stroke:"none"},svg);
+  el("path",{d,fill:"url(#hatch)",opacity:".55"},svg);
+  el("path",{d,fill:"none",stroke:"#21402e","stroke-width":"2.2","stroke-linejoin":"round"},svg);
+  el("path",{d:"M"+TNR.map(p=>proj(...p).join(",")).join("L"),fill:"none",stroke:"#7fa6c4","stroke-width":"3","stroke-linecap":"round","stroke-linejoin":"round",opacity:".8"},svg);
+  const [gx,gy]=proj(30.12,-87.6);
+  const gt=el("text",{x:gx,y:gy+8,"font-size":"11","fill":"#5f86a3","font-style":"italic","text-anchor":"middle"},svg);gt.textContent="Gulf of Mexico";
+  const [ax,ay]=proj(32.75,-86.65);
+  const big=el("text",{x:ax,y:ay,"font-size":"38","fill":"#21402e",opacity:".07","text-anchor":"middle","font-family":"Barlow Condensed","font-weight":"800","letter-spacing":"6"},svg);big.textContent="ALABAMA";
+  gLabels=el("g",{},svg);
+  gPins=el("g",{},svg);
+}
+function drawDynamic(){
+  const k=view.w/FULL.w;
+  gLabels.innerHTML="";
+  CITIES.forEach(([n,la,lo])=>{
+    const [x,y]=proj(la,lo);
+    el("circle",{cx:x,cy:y,r:2.6*k,fill:"#fff",stroke:"#6b685e","stroke-width":1.2*k},gLabels);
+    const t=el("text",{x:x+5*k,y:y+3.5*k,"font-size":10*k,fill:"#6b685e","font-weight":"600"},gLabels);t.textContent=n;
+  });
+  // scale bar: 50 miles ~ 0.7245 deg lat
+  const [sx,sy]=proj(30.55,-85.55);const len=0.7245*120;
+  el("path",{d:`M${sx},${sy}h${len}`,stroke:"#1c1e19","stroke-width":2*k},gLabels);
+  const sl=el("text",{x:sx,y:sy-5*k,"font-size":9*k,fill:"#1c1e19"},gLabels);sl.textContent="50 mi";
+  gPins.innerHTML="";
+  const list=filtered();
+  const ids=new Set(list.map(l=>l.id));
+  LISTINGS.slice().sort((a,b)=>(a.id===st.sel)-(b.id===st.sel)).forEach(l=>{
+    const [x,y]=proj(l.lat,l.lon);
+    const on=ids.has(l.id),sel=st.sel===l.id;
+    const s=k*(sel?1.35:1);
+    const g=el("g",{transform:`translate(${x},${y}) scale(${s})`,style:"cursor:pointer",opacity:on?1:.25,filter:"url(#sh)"},gPins);
+    el("path",{d:"M0 0C-2-6-10-10-10-17A10 10 0 1 1 10-17C10-10 2-6 0 0Z",fill:sel?"#21402e":"#e5602a",stroke:"#fff","stroke-width":"1.6"},g);
+    const t=el("text",{x:0,y:-13.5,"text-anchor":"middle","font-size":"8.5","font-weight":"700",fill:"#fff","font-family":"Inter"},g);t.textContent="$"+l.price;
+    if(l.mech){el("circle",{cx:9,cy:-25,r:5.5,fill:"#fff",stroke:"#21402e","stroke-width":"1.2"},g);
+      el("path",{d:"M6.8-22.8l3.6-3.6M10.4-26.4a1.6 1.6 0 1 1 1.4-1.4",stroke:"#21402e","stroke-width":"1.5",fill:"none","stroke-linecap":"round"},g)}
+    if(on){
+      g.addEventListener("click",e=>{e.stopPropagation();select(l.id,true)});
+      g.addEventListener("mouseenter",()=>showTip(l,x,y));
+      g.addEventListener("mouseleave",hideTip);
+    }
+  });
+}
+function setView(){svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`);drawDynamic()}
+function showTip(l,x,y){
+  const tip=$("#tip"),r=svg.getBoundingClientRect(),wrap=svg.parentElement.getBoundingClientRect();
+  const sc=Math.max(view.w/r.width,view.h/r.height);
+  const ox=(r.width-view.w/sc)/2,oy=(r.height-view.h/sc)/2;
+  const px=r.left-wrap.left+ox+(x-view.x)/sc,py=r.top-wrap.top+oy+(y-view.y)/sc-18;
+  tip.style.left=px+"px";tip.style.top=py+"px";
+  tip.innerHTML=`<b>${l.name}</b> · ${l.town}<br>${l.acres} acres · $${l.price}/rider`;
+  tip.style.display="block";
+}
+function hideTip(){$("#tip").style.display="none"}
+function animateTo(t){
+  const s={...view},t0=performance.now(),D=450;
+  (function step(now){const p=Math.min(1,(now-t0)/D),e=1-Math.pow(1-p,3);
+    for(const key of["x","y","w","h"])view[key]=s[key]+(t[key]-s[key])*e;setView();if(p<1)requestAnimationFrame(step)})(t0);
+}
+function zoomBy(f,cx,cy){
+  if(cx===undefined){cx=view.x+view.w/2;cy=view.y+view.h/2}
+  const nw=Math.min(Math.max(view.w*f,40),700);f=nw/view.w;
+  view={x:cx-(cx-view.x)*f,y:cy-(cy-view.y)*f,w:view.w*f,h:view.h*f};setView();
+}
+function toSvg(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+svg.addEventListener("wheel",e=>{e.preventDefault();const p=toSvg(e);zoomBy(e.deltaY>0?1.15:1/1.15,p.x,p.y)},{passive:false});
+let drag=null;
+svg.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,v:{...view},moved:false};svg.setPointerCapture(e.pointerId)});
+svg.addEventListener("pointermove",e=>{if(!drag)return;const r=svg.getBoundingClientRect();const sc=Math.max(view.w/r.width,view.h/r.height);
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3){drag.moved=true;svg.classList.add("drag");hideTip()}
+  view.x=drag.v.x-dx*sc;view.y=drag.v.y-dy*sc;setView()});
+svg.addEventListener("pointerup",e=>{svg.classList.remove("drag");
+  if(drag&&!drag.moved){const t=document.elementFromPoint(e.clientX,e.clientY);const g=t&&t.closest&&t.closest("#map g g");if(g)g.dispatchEvent(new MouseEvent("click",{bubbles:true}))}
+  drag=null});
+$("#zin").onclick=()=>zoomBy(1/1.4);$("#zout").onclick=()=>zoomBy(1.4);
+$("#zreset").onclick=()=>{st.sel=null;animateTo(FULL);renderSide()};
+
+/* ---------- trail map ---------- */
+function rng(seed){return()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646}}
+function smooth(pts){const n=pts.length;let d=`M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<n;i++){const p0=pts[(i-1+n)%n],p1=pts[i],p2=pts[(i+1)%n],p3=pts[(i+2)%n];
+    d+=`C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`}
+  return d+"Z"}
+function trailMap(l,w=388,h=170){
+  const r=rng(l.id*7919+13);
+  let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;background:#eef2e6">`;
+  for(let i=0;i<7;i++){const cx=r()*w,cy=r()*h;for(let j=1;j<5;j++)s+=`<ellipse cx="${cx}" cy="${cy}" rx="${j*22+r()*8}" ry="${j*14+r()*6}" fill="none" stroke="#cfd8bf" stroke-width="1"/>`}
+  if(l.terrain.includes("Mud & creeks"))s+=`<path d="M0 ${h*.7} C ${w*.3} ${h*.5}, ${w*.5} ${h*.95}, ${w} ${h*.75}" stroke="#8fb4cf" stroke-width="4" fill="none"/>`;
+  const cols=[["#2f8a46","Easy"],["#2c6fb5","Intermediate"],["#1c1e19","Expert"]];
+  const loops=l.skill==="Beginner"?1:l.skill==="Advanced"?2:3;
+  const order=l.skill==="Advanced"?[1,2]:[0,1,2];
+  const px=40,py=h-30;
+  for(let k=0;k<loops;k++){
+    const c=cols[order[k]];const cx=w*(.35+k*.2)+r()*20,cy=h*.45+r()*15;const n=9;const pts=[];
+    for(let i=0;i<n;i++){const a=i/n*Math.PI*2;const rad=(48+k*12)*(.6+r()*.6);pts.push([cx+Math.cos(a)*rad*1.6,cy+Math.sin(a)*rad*.8])}
+    pts[0]=[px+18,py-6];
+    s+=`<path d="${smooth(pts)}" fill="none" stroke="${c[0]}" stroke-width="3" stroke-dasharray="${k===2?"6 4":"none"}" stroke-linecap="round" opacity=".9"/>`;
+  }
+  if(l.terrain.includes("MX track")){const tx=w*.78,ty=h*.25;s+=`<rect x="${tx-34}" y="${ty-16}" width="68" height="32" rx="16" fill="none" stroke="#c94d1c" stroke-width="5"/><text x="${tx}" y="${ty+4}" font-size="9" text-anchor="middle" fill="#c94d1c" font-weight="700">MX</text>`}
+  if(l.kids)s+=`<circle cx="${w*.14}" cy="${h*.3}" r="14" fill="none" stroke="#e5a52a" stroke-width="3"/><text x="${w*.14}" y="${h*.3+3}" font-size="7.5" text-anchor="middle" fill="#a87412" font-weight="700">KIDS</text>`;
+  s+=`<rect x="${px-12}" y="${py-10}" width="24" height="20" rx="4" fill="#21402e"/><text x="${px}" y="${py+4}" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">P</text>`;
+  s+=`<g font-size="9" font-family="Inter">${order.slice(0,loops).map((o,i)=>`<rect x="${w-86}" y="${h-14-(loops-1-i)*13}" width="10" height="3" fill="${cols[o][0]}"/><text x="${w-72}" y="${h-10-(loops-1-i)*13}" fill="#444">${cols[o][1]}</text>`).join("")}</g>`;
+  return s+"</svg>";
+}
+function thumb(l){return trailMap(l,120,120).replace('width="100%"','width="62" height="62"')}
+
+/* ---------- side panel ---------- */
+function renderSide(){
+  const side=$("#side");
+  if(st.sel){renderDetail(LISTINGS.find(l=>l.id===st.sel));return}
+  const list=filtered();
+  side.innerHTML=`<div class="sidehead"><h2>${list.length} properties in Alabama</h2><p>Private land you can book by the day. Every rider signs the waiver before getting the gate code.</p>
+  <input class="search" type="text" id="q" placeholder="Search by town or property" value="${st.q}"></div>
+  <div class="list">${list.length?list.map(l=>`<div class="card" data-id="${l.id}"><div class="thumb">${thumb(l)}</div>
+  <div><h3>${l.name}</h3><div class="meta">${l.town}, AL · ${l.acres} acres · ${l.miles} mi trails</div>
+  <div class="tags">${l.terrain.slice(0,2).map(t=>`<span class="tag">${t}</span>`).join("")}${l.kids?'<span class="tag k">Kids</span>':""}${l.mech?'<span class="tag m">🔧 Mechanic</span>':""}</div></div>
+  <div class="pp"><b>$${l.price}</b><span>rider/day</span></div></div>`).join(""):`<div class="empty">No land matches those filters. Try widening the price or terrain.</div>`}</div>`;
+  const q=$("#q");q.oninput=e=>{st.q=e.target.value;update(true)};
+  side.querySelectorAll(".card").forEach(c=>{const id=+c.dataset.id;
+    c.onclick=()=>select(id,true);
+    c.onmouseenter=()=>{const l=LISTINGS.find(x=>x.id===id);const[x,y]=proj(l.lat,l.lon);showTip(l,x,y)};
+    c.onmouseleave=hideTip});
+}
+const DN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function openDays(l){if(l.open.length===7)return"Daily";return[1,2,3,4,5,6,0].filter(d=>l.open.includes(d)).map(d=>DN[d]).join(", ")}
+function renderDetail(l){
+  $("#side").innerHTML=`<div class="detail"><button class="back" id="bk">← All properties</button>
+  <h2>${l.name}</h2><div class="meta" style="margin-top:4px">${l.town}, AL · Hosted by ${l.owner} · ${l.lat.toFixed(4)}° N, ${Math.abs(l.lon).toFixed(4)}° W</div>
+  <div class="trailbox">${trailMap(l)}<div class="cap"><span>Trail map preview · ${l.miles} miles marked</span><span>Full GPS map unlocks at check-in</span></div></div>
+  <div class="facts"><div class="fact"><b>$${l.price}</b><span>per rider / day</span></div><div class="fact"><b>${l.acres}</b><span>acres</span></div><div class="fact"><b>${l.max}</b><span>max riders / day</span></div></div>
+  <p>${l.desc}</p>
+  <div class="sec"><h4>Terrain & skill</h4><div class="tags">${l.terrain.map(t=>`<span class="tag">${t}</span>`).join("")}<span class="tag k">${l.skill}</span>${l.kids?'<span class="tag k">Kid friendly</span>':""}</div></div>
+  <div class="sec"><h4>Open</h4>${openDays(l)} · 8 AM to sunset</div>
+  <div class="sec"><h4>Bike repairs</h4>${l.mech
+    ?`<p style="margin-bottom:6px">A mechanic is on site every open day. Add these when you book:</p><ul>${ADDONS.map(a=>`<li>${a.name} · <b>$${a.price}${a.per==="bike"?"/bike":"/group"}</b></li>`).join("")}</ul>`
+    :`<p>No mechanic on site. You can still add ${ADDONS.filter(a=>!a.mech).map(a=>a.name.toLowerCase()).join(" and ")} when you book.</p>`}</div>
+  <div class="sec"><h4>Amenities</h4><ul>${l.amen.map(a=>`<li>${a}</li>`).join("")}</ul></div>
+  <div class="sec"><h4>Landowner rules</h4><ul><li>Spark arrestor required, 96 dB sound limit</li><li>Helmet, boots and goggles required for every rider</li><li>Stay on marked trails. No riding near the house or livestock</li>${l.kids?"<li>Riders under 16 need a parent on site</li>":"<li>Riders must be 16 or older</li>"}<li>Closes after heavy rain. You get a full refund if the owner closes</li></ul></div>
+  <div class="sticky"><button class="btn" id="bookbtn">Book a ride day · from $${l.price}</button></div></div>`;
+  $("#bk").onclick=()=>{st.sel=null;renderSide();drawDynamic()};
+  $("#bookbtn").onclick=()=>openBooking(l);
+  $("#side").scrollTop=0;
+}
+function select(id,zoom){
+  st.sel=id;const l=LISTINGS.find(x=>x.id===id);renderSide();
+  if(zoom){const[x,y]=proj(l.lat,l.lon);const w=170,h=w*FULL.h/FULL.w;animateTo({x:x-w/2,y:y-h/2-10,w,h})}else drawDynamic();
+}
+function update(keepSide){drawDynamic();if(!keepSide)renderSide();else{
+  const list=filtered();const head=$(".sidehead h2");if(head)head.textContent=list.length+" properties in Alabama";
+  const box=$(".list");if(box){const q=st.q;renderSide();const qi=$("#q");qi.focus();qi.setSelectionRange(q.length,q.length)}}}
+
+/* ---------- booking ---------- */
+let bk={};
+function openBooking(l){
+  const now=new Date();const dates=[];
+  for(let i=1;dates.length<10&&i<40;i++){const d=new Date(now);d.setDate(now.getDate()+i);if(l.open.includes(d.getDay()))dates.push(d)}
+  bk={l,step:1,dates,date:null,riders:2,names:["",""],minor:[false,false],agree:false,sig:"",guard:"",add:new Set()};
+  $("#ov").classList.add("on");renderBooking();
+}
+function closeBooking(){$("#ov").classList.remove("on")}
+$("#ov").addEventListener("click",e=>{if(e.target.id==="ov")closeBooking()});
+const addCost=a=>a.price*(a.per==="bike"?bk.riders:1);
+function picked(){return ADDONS.filter(a=>bk.add.has(a.id))}
+function fees(){const sub=bk.riders*bk.l.price,fee=bk.riders*3,add=picked().reduce((s,a)=>s+addCost(a),0);
+  return{sub,fee,add,tot:sub+fee+add,owner:sub*.85,mechPay:add*.8}}
+function addLines(){return picked().map(a=>`<div><span>${a.name}${a.per==="bike"?` (${bk.riders} bikes)`:""}</span><span>${money(addCost(a))}</span></div>`).join("")}
+function renderBooking(){
+  const l=bk.l,m=$("#modal");
+  const steps=`<div class="steps">${[1,2,3,4].map(i=>`<div class="${i<=bk.step?"on":""}"></div>`).join("")}</div>`;
+  const head=`<div class="mhead"><div><h3>${["","Pick your day","Riders & waiver","Checkout","You're booked"][bk.step]}</h3><div class="meta">${l.name} · ${l.town}, AL</div></div><button class="x" id="mx">×</button></div>`;
+  let body="";
+  if(bk.step===1){
+    body=`<h4>Available days</h4><div class="dates">${bk.dates.map((d,i)=>`<button class="date ${bk.date===i?"on":""}" data-i="${i}"><span>${DN[d.getDay()]}</span><b>${d.getDate()}</b><span>${d.toLocaleString("en-US",{month:"short"})}</span></button>`).join("")}</div>
+    <h4>Riders</h4><div class="stepper"><button id="rm">−</button><b>${bk.riders}</b><button id="rp">+</button><span class="meta">Max ${l.max} riders per day on this property</span></div>
+    <h4>Bike repairs & add-ons</h4><div class="addons">${ADDONS.filter(a=>!a.mech||l.mech).map(a=>`<label class="addon ${bk.add.has(a.id)?"on":""}"><input type="checkbox" data-a="${a.id}" ${bk.add.has(a.id)?"checked":""}><div><b>${a.name}</b><span>${a.desc}</span></div><em>+$${a.price}<small>${a.per==="bike"?"per bike":"per group"}</small></em></label>`).join("")}</div>
+    ${l.mech?"":`<p class="note">No mechanic on site at this property, so repair services aren't offered here. Filter for 🔧 Mechanic on site to find land that has one.</p>`}
+    <h4>Price</h4><div class="sum"><div><span>${bk.riders} riders × $${l.price}</span><span>${money(fees().sub)}</span></div>${addLines()}<div><span>Booking fee</span><span>${money(fees().fee)}</span></div><div class="tot"><span>Total</span><span>${money(fees().tot)}</span></div></div>
+    <div class="err" id="er"></div><div class="navbtns"><button class="btn" id="nx">Continue</button></div>`;
+  }else if(bk.step===2){
+    body=`<h4>Who's riding</h4>${bk.names.map((n,i)=>`<div class="row"><input type="text" data-n="${i}" placeholder="Rider ${i+1} full name" value="${n}"><label><input type="checkbox" data-m="${i}" ${bk.minor[i]?"checked":""}> Under 18</label></div>`).join("")}
+    <h4>Landowner waiver (sample)</h4><div class="waiver"><p><b>Release and Assumption of Risk.</b> Off-road motorcycle riding is a dangerous activity that can cause serious injury or death. Each rider voluntarily assumes all risks of riding on the property of ${l.owner} (the "Landowner").</p><p>In exchange for permission to ride, each rider releases the Landowner and 450 Bikes from claims for injury or property damage arising from use of the property, to the fullest extent allowed by Alabama law.</p><p>Riders agree to follow the posted rules, stay on marked trails, wear required safety gear and leave the gate as they found it.</p><p style="color:#a0522d">Demo text only. A real waiver must be written by an Alabama attorney.</p></div>
+    <label class="check"><input type="checkbox" id="ag" ${bk.agree?"checked":""}> I have read the waiver and agree on behalf of every rider listed.</label>
+    <input class="sig" type="text" id="sg" placeholder="Type your full name to sign" value="${bk.sig}">
+    ${bk.minor.some(x=>x)?`<h4>Parent or guardian signature (required for minors)</h4><input class="sig" type="text" id="gd" placeholder="Guardian full name" value="${bk.guard}">`:""}
+    <div class="err" id="er"></div><div class="navbtns"><button class="btn ghost" id="pv2">Back</button><button class="btn" id="nx">Continue to checkout</button></div>`;
+  }else if(bk.step===3){
+    const f=fees(),d=bk.dates[bk.date];
+    body=`<h4>Summary</h4><div class="sum"><div><span>Date</span><span>${d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</span></div><div><span>Riders</span><span>${bk.names.join(", ")}</span></div><div><span>Waiver</span><span style="color:#2f8a46;font-weight:600">✓ Signed by ${bk.sig}</span></div>
+    <div><span>${bk.riders} × $${l.price}</span><span>${money(f.sub)}</span></div>${addLines()}<div><span>Booking fee</span><span>${money(f.fee)}</span></div><div class="tot"><span>Total</span><span>${money(f.tot)}</span></div></div>
+    <h4>Payment</h4><div class="fake"><input type="text" placeholder="Card number" value="4242 4242 4242 4242"><input type="text" placeholder="MM/YY" value="12/28"><input type="text" placeholder="CVC" value="123"></div>
+    <p class="note">Demo mode. No payment is collected. In production this would run through Stripe Connect, which splits the payout to the landowner automatically.</p>
+    <div class="navbtns"><button class="btn ghost" id="pv2">Back</button><button class="btn" id="nx">Pay ${money(f.tot)}</button></div>`;
+  }else{
+    const f=fees(),d=bk.dates[bk.date];
+    body=`<div class="conf"><div class="ok"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" stroke="#21402e" stroke-width="3" fill="none" stroke-linecap="round"/></svg></div>
+    <div class="meta">Your gate code</div><div class="big">${bk.code}</div><div class="meta">Works ${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}, 8 AM to sunset</div></div>
+    <div class="cgrid"><div class="fact"><b style="font-size:16px">${l.lat.toFixed(5)}, ${l.lon.toFixed(5)}</b><span>Gate GPS pin (opens in Maps)</span></div><div class="fact"><b style="font-size:16px">${bk.riders} riders</b><span>All waivers on file</span></div>
+    <div class="fact"><b style="font-size:16px">Check in at gate</b><span>Unlocks the offline GPS trail map</span></div><div class="fact"><b style="font-size:16px">${money(f.owner)}</b><span>${l.owner}'s payout after 15% fee</span></div></div>
+    ${f.add?`<div class="sum" style="text-align:left;margin-bottom:10px"><div style="font-weight:700"><span>🔧 Repairs & add-ons booked</span><span>${money(f.add)}</span></div>${picked().map(a=>`<div style="font-size:12.5px;color:#4a483f"><span>${a.name}</span><span>✓</span></div>`).join("")}<div style="font-size:12px;color:#6b685e"><span>${bk.add.has("check")?"Mechanic meets you at the pits at 8:30 AM for safety checks":"Find the mechanic at the pits when you arrive"}</span><span>${money(f.mechPay)} to mechanic</span></div></div>`:""}
+    <p class="note" style="text-align:center">A text with the code and directions goes to every rider. If ${l.owner} closes for weather, you're refunded automatically.</p>
+    <div class="navbtns"><button class="btn" id="dn">Done</button></div>`;
+  }
+  m.innerHTML=head+steps+`<div class="mbody">${body}</div>`;
+  $("#mx").onclick=closeBooking;
+  const er=t=>{$("#er").textContent=t};
+  if(bk.step===1){
+    m.querySelectorAll(".date").forEach(b=>b.onclick=()=>{bk.date=+b.dataset.i;renderBooking()});
+    $("#rm").onclick=()=>{if(bk.riders>1){bk.riders--;bk.names.pop();bk.minor.pop();renderBooking()}};
+    m.querySelectorAll("[data-a]").forEach(i=>i.onchange=()=>{i.checked?bk.add.add(i.dataset.a):bk.add.delete(i.dataset.a);renderBooking()});
+    $("#rp").onclick=()=>{if(bk.riders<l.max){bk.riders++;bk.names.push("");bk.minor.push(false);renderBooking()}};
+    $("#nx").onclick=()=>{if(bk.date===null)return er("Pick a day to ride.");bk.step=2;renderBooking()};
+  }else if(bk.step===2){
+    m.querySelectorAll("[data-n]").forEach(i=>i.oninput=()=>bk.names[+i.dataset.n]=i.value);
+    m.querySelectorAll("[data-m]").forEach(i=>i.onchange=()=>{bk.minor[+i.dataset.m]=i.checked;renderBooking()});
+    $("#ag").onchange=e=>bk.agree=e.target.checked;
+    $("#sg").oninput=e=>bk.sig=e.target.value;
+    if($("#gd"))$("#gd").oninput=e=>bk.guard=e.target.value;
+    $("#pv2").onclick=()=>{bk.step=1;renderBooking()};
+    $("#nx").onclick=()=>{
+      if(bk.names.some(n=>n.trim().length<3))return er("Enter a full name for every rider.");
+      if(!l.kids&&bk.minor.some(x=>x))return er("This property only allows riders 16 and older.");
+      if(!bk.agree)return er("Agree to the waiver to continue.");
+      if(bk.sig.trim().length<3)return er("Type your name to sign.");
+      if(bk.minor.some(x=>x)&&bk.guard.trim().length<3)return er("A parent or guardian has to sign for riders under 18.");
+      bk.step=3;renderBooking()};
+  }else if(bk.step===3){
+    $("#pv2").onclick=()=>{bk.step=2;renderBooking()};
+    $("#nx").onclick=()=>{bk.code=String(1000+Math.floor(Math.random()*9000));bk.step=4;renderBooking()};
+  }else{$("#dn").onclick=closeBooking}
+}
+
+/* ---------- owner calc ---------- */
+function calc(){
+  const p=+$("#o_p").value,r=+$("#o_r").value,d=+$("#o_d").value,mo=+$("#o_m").value;
+  $("#o_p_v").textContent="$"+p;$("#o_r_v").textContent=r;$("#o_d_v").textContent=d;$("#o_m_v").textContent=mo;
+  const g=p*r*d,f=g*.15,o=g-f;
+  $("#o_out").textContent=money(o);$("#o_g").textContent=money(g);$("#o_f").textContent="−"+money(f);$("#o_y").textContent=money(o*mo);
+}
+["o_p","o_r","o_d","o_m"].forEach(i=>$("#"+i).oninput=calc);
+
+drawBase();renderFilters();setView();renderSide();calc();
+</script>
+</body>
+</html>

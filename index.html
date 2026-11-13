@@ -796,7 +796,7 @@ function render(){
 }
 const bind={};
 
-function welcome(){const TOOLS=[]; /* add {name, by, what} for each student tool shared with permission */ return `
+function welcome(){const TOOLS=[{name:"450 Bikes",by:"one of our God's Sons in the Build Lab",what:"A booking app for legal dirt bike riding on private land across Alabama. Riders find land on a map, sign the waiver, add bike repairs, and get a gate code. Landowners see what they could earn.",link:"450-bikes.html"}]; /* add {name, by, what} for each student tool shared with permission */ return `
  <section class="vhero" aria-label="Welcome">
   ${S.heroVideo?`<video src="${esc(S.heroVideo)}" autoplay muted loop playsinline aria-hidden="true"></video>`:photoOf("hero")?`<img class="vphoto" src="${photoOf("hero")}" alt="">`:`<div class="vbg" aria-hidden="true"></div>`}
   <div class="shade" aria-hidden="true"></div>
@@ -871,7 +871,7 @@ function welcome(){const TOOLS=[]; /* add {name, by, what} for each student tool
   <p>The goal is to raise groups of developers and engineers from communities that have been left out of tech. Students start in the Build Lab and move into real projects, and then toward jobs with partner businesses.</p>
   <h3 style="margin-top:1.6rem">Built by our youth</h3>
   <p class="muted">Tools our students have built with AI, shared with their permission.</p>
-  ${TOOLS.length?`<div class="ej-mini">${TOOLS.map(t=>`<div style="border:1px solid var(--line);border-radius:12px;padding:1rem;background:#fff"><b>${esc(t.name)}</b><span class="sub" style="display:block">Built by ${esc(t.by)}</span><p style="margin:.4rem 0 0">${esc(t.what)}</p></div>`).join("")}</div>`:`<div class="note">Our first student tools are on the way. Each one is shared with the student's permission and goes by first name and last initial.</div>`}
+  ${TOOLS.length?`<div class="ej-mini">${TOOLS.map(t=>`<div style="border:1px solid var(--line);border-radius:12px;padding:1rem;background:#fff"><b>${esc(t.name)}</b><span class="sub" style="display:block">Built by ${esc(t.by)}</span><p style="margin:.4rem 0 0">${esc(t.what)}</p>${t.link?`<a href="${esc(t.link)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:.6rem;color:var(--river);font-weight:700;text-decoration:none">Try the demo &rarr;</a>`:""}</div>`).join("")}</div>`:`<div class="note">Our first student tools are on the way. Each one is shared with the student's permission and goes by first name and last initial.</div>`}
   <p style="margin-top:1.2rem"><button class="btn ghost" data-nav="youthNew">Join the Build Lab</button></p>
  </section>
 
@@ -1419,6 +1419,7 @@ function starsView(){
   <tr><td><b>4. Demo night</b></td><td>Show the tool to a developer or engineer from the community and answer their questions</td><td>A conversation with someone who does this for a living</td></tr></tbody></table></div>
   <p class="muted" style="font-size:1rem;margin-top:.8rem">Students use AI on accounts that program staff hold and supervise, with a mentor in the room, and they never type names, case details, or other personal information into a tool. The sessions run on the same open-entry loop as everything else. A student can start at session 3 and pick up the first two the next time around.</p>
 
+  <div class="sitelink"><p><b>Student project: 450 Bikes.</b> One of our God's Sons built a booking app for legal dirt bike riding on private land across Alabama, with a map, waivers, bike repair add-ons, and a landowner earnings calculator.</p><a href="450-bikes.html" target="_blank" rel="noopener">Try 450 Bikes &rarr;</a></div>
   <h3 style="margin-top:2rem">Hands-on skills days</h3>
   <p>Five days where students do the thing instead of hearing about it. They run on a monthly rotation, so whoever is in the room that month takes part. Skills days are enrichment and do not count toward completion, so no one falls behind for missing one.</p>
   <div class="tablewrap"><table><thead><tr><th>Day</th><th>When</th><th>Students learn</th><th>Community host</th></tr></thead><tbody>${STARS_SKILLS.map(r=>`<tr>${r.map((c,i)=>`<td>${i===0?"<b>"+esc(c)+"</b>":esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
